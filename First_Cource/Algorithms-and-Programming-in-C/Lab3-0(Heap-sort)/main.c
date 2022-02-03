@@ -40,8 +40,8 @@ void heap_sort(int* num, int size) {
 }
 
 int main(void) {
-	FILE* f = fopen("in.txt", "rt");
-	if (f == NULL) return 0;
+    FILE* f = fopen("in.txt", "rt");
+    if (f == NULL) return 0;
 
     int size = 0;
     if (!fscanf(f, "%d", &size)) {
@@ -68,6 +68,6 @@ int main(void) {
         printf("%d ",num[i]);
     }
     free(num);
-	fclose(f);
-	return  EXIT_SUCCESS;
+    fclose(f);
+    return  EXIT_SUCCESS;
 }
