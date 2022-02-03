@@ -1,0 +1,204 @@
+is_digit(char*):
+        push    {r7}    		;сохраняем кадр стек
+        sub     sp, sp, #20  	;увеличиваем стек
+        add     r7, sp, #0  	;сохраняем в r7 значение на дне стека()
+        str     r0, [r7, #4]  	;Сохранить регистр r0 в r7+4
+        movs    r3, #0
+        str     r3, [r7, #12] 	
+        b       .L2
+.L6:
+        ldr     r2, [r7, #4]							;на r2 положили строку
+        ldr     r3, [r7, #12]							;на r3 i
+        add     r3, r3, r2								;r3 - указатель на первый эл-т строки
+        ldrb    r3, [r3]        @ zero_extendqisi2 		
+        cmp     r3, #47  								;сравнение с нулем
+        bls     .L3										;<
+        ldr     r2, [r7, #4]							;r2 = str
+        ldr     r3, [r7, #12]							;r3 = 0
+        add     r3, r3, r2								;r3 = (str + 0)
+        ldrb    r3, [r3]        @ zero_extendqisi2		;Quarter-Integer to Single Integer
+        cmp     r3, #57  								;сравнение с 9
+        bls     .L4										;unsigned lower or same
+.L3:
+        movs    r3, #0
+        b       .L5
+.L4:
+        ldr     r3, [r7, #12]							
+        adds    r3, r3, #1 								;двигаемся по строке
+        str     r3, [r7, #12] 							;сохраняем на стеке текущий указатель
+.L2:
+        ldr     r2, [r7, #4]							
+        ldr     r3, [r7, #12]						
+        add     r3, r3, r2								;двигаем указатель
+        ldrb    r3, [r3]        @ zero_extendqisi2
+        cmp     r3, #0									;проверка на конец строки
+        bne     .L6
+        movs    r3, #1
+.L5:
+        mov     r0, r3				;r0 - указатель
+        adds    r7, r7, #20			;сдвинули
+        mov     sp, r7
+        ldr     r7, [sp], #4
+        bx      lr					;переход по адрессу lr
+exhibitor(double, unsigned int):
+        push    {r7}
+        sub     sp, sp, #44
+        add     r7, sp, #0
+        vstr.64 d0, [r7, #8]		;d0(x) записали на стеке
+        str     r0, [r7, #4]		;r0(n) записали на стеке
+        mov     r2, #0
+        mov     r3, #0
+        movt    r3, 16368			;move top
+        strd    r2, [r7, #32]		;store doubleword r3,r2 (save 1 in [r7, #32])
+        mov     r2, #0
+        mov     r3, #0
+        movt    r3, 16368
+        strd    r2, [r7, #24]		;(save 1 in [r7, #32])
+        movs    r3, #1
+        str     r3, [r7, #20]
+        b       .L8
+.L9:
+        ldr     r3, [r7, #20]				;r3 = 1
+        vmov    s15, r3 @ int				;s15 хранит 1(i)
+        vcvt.f64.u32    d17, s15			;s15->d17 = 1
+        vldr.64 d18, [r7, #8]				;d18 = x
+        vdiv.f64        d16, d18, d17		;d16 = d18 / d17 (x / i)
+        vldr.64 d17, [r7, #32]				;выгружаем предыдущее значение a в 17
+        vmul.f64        d16, d17, d16		;a = a * (x/i)
+        vstr.64 d16, [r7, #32]				;save a in [r7, #32]
+
+		
+        vldr.64 d17, [r7, #24]				;d17 = s
+        vldr.64 d16, [r7, #32]				;d16 = a
+        vadd.f64        d16, d17, d16		;a = s + a
+        vstr.64 d16, [r7, #24]				;[r7, #24] результат суммы a и s 
+        ldr     r3, [r7, #20]				;r3 = 1
+        adds    r3, r3, #1					;r3++
+        str     r3, [r7, #20]
+.L8:
+        ldr     r2, [r7, #20]				;r2 = r3++;
+        ldr     r3, [r7, #4]				;r3 = n
+        cmp     r2, r3
+        bls     .L9							;unsigned lower or same
+        ldrd    r2, [r7, #24]				;r2 = i
+        vmov    d16, r2, r3					;
+        vmov.f64        d0, d16
+        adds    r7, r7, #44
+        mov     sp, r7
+        ldr     r7, [sp], #4
+        bx      lr							;переход по адрессу lr
+foo():
+        push    {r7}
+        sub     sp, sp, #12
+        add     r7, sp, #0 				;в регистре r7 хранится указатель на вершину стека
+        movs    r3, #0  				; i на r3
+        str     r3, [r7, #4] 			;save i on stack
+        b       .L12
+.L13:
+        ldr     r3, [r7, #4]
+        adds    r3, r3, #1
+        str     r3, [r7, #4]
+.L12:
+        ldr     r2, [r7, #4]
+		;кладем 100000 на r3
+        movw    r3, #34463
+        movt    r3, 1
+        cmp     r2, r3
+        ble     .L13
+        nop
+        nop
+        adds    r7, r7, #12
+        mov     sp, r7
+        ldr     r7, [sp], #4
+        bx      lr					;переход по адрессу lr
+.LC0:
+        .ascii  "incorect data!\000"
+.LC1:
+        .ascii  "%lf\000"
+main:
+        push    {r7, lr}  		;Помещаем в стек r7 и LinkRegister (r13), чтобы затем вернуть их в исходное состояние
+        sub     sp, sp, #16  
+        ;сохраняем входные параметры 
+        ;они на r1 и r0
+        add     r7, sp, #0  	;в r7 указатель на стек
+        str     r0, [r7, #4]  	;Сохранить в r7+4 r0
+        str     r1, [r7]    	;загрузить из r7 in r1
+        ldr     r3, [r7]    	;r3 адрес r7
+        adds    r3, r3, #4й  	;r3 = r3 + 4 сдвинули указатель
+        ldr     r3, [r3]   		;на r3 argv
+        mov     r0, r3
+        bl      is_digit(char*) 
+        mov     r3, r0   		;видимо через r0 пришли выходные с функции
+        eor     r3, r3, #1   	;r3 = !r3 (Exclusive OR    Rd := (Rn AND NOT Op2) OR (op2 AND NOT Rn) )
+        uxtb    r3, r3			;Extends an 8-bit value to a 32-bit value.
+        cmp     r3, #0
+        bne     .L15			;(branch if not equal)
+        ldr     r3, [r7]		;Аналогичные проверки
+        adds    r3, r3, #8
+        ldr     r3, [r3]
+        mov     r0, r3
+        bl      is_digit(char*)
+        mov     r3, r0
+        eor     r3, r3, #1
+        uxtb    r3, r3
+        cmp     r3, #0
+        bne     .L15
+        ldr     r3, [r7, #4]	;Check argc
+        cmp     r3, #3
+
+		beq     .L16					
+.L15:
+        movs    r3, #1
+        b       .L17
+.L16:
+        movs    r3, #0
+.L17:
+        cmp     r3, #0
+        beq     .L18
+		;print
+        movw    r0, #:lower16:.LC0
+        movt    r0, #:upper16:.LC0
+        bl      puts
+        movs    r3, #0
+        b       .L19
+.L18:
+        bl      foo()
+        ldr     r3, [r7]
+        adds    r3, r3, #4
+        ldr     r3, [r3]
+        mov     r0, r3
+        bl      atoll				;r0 хранит argv[1]
+        mov     r2, r0
+        mov     r3, r1
+        mov     r3, r2
+        str     r3, [r7, #12]		;r7+12 save r3(result atoll)
+        ldr     r3, [r7]
+
+adds    r3, r3, #8
+        ldr     r3, [r3]
+        mov     r0, r3
+        bl      atoll
+        mov     r2, r0
+        mov     r3, r1
+        mov     r3, r2				;на r3 выходные
+        str     r3, [r7, #8]
+        ldr     r3, [r7, #8]		;x на r3
+        vmov    s15, r3 @ int		;s15 - вещественный 32б регистр
+        vcvt.f64.s32    d16, s15	;d16 - 64б регистр		
+        ldr     r3, [r7, #12]		;на r3 n
+        mov     r0, r3				;на r0 n
+        vmov.f64        d0, d16
+        bl      exhibitor(double, unsigned int)
+        vmov    r2, r3
+		;print
+        movw    r0, #:lower16:.LC1
+        movt    r0, #:upper16:.LC1
+        bl      printf
+        movs    r3, #0
+.L19:
+        mov     r0, r3
+		;приводим стек в исходное состояние
+        adds    r7, r7, #16
+        mov     sp, r7
+		;передаем управление вызвавшей подпрограмме и и восстанавливаем стек
+        pop     {r7, pc}

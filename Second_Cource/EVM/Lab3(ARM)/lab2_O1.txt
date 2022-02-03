@@ -1,0 +1,92 @@
+is_digit(char*):
+        ldrb    r3, [r0]        @ zero_extendqisi2
+        cbz     r3, .L4
+.L3:
+        subs    r3, r3, #48
+        uxtb    r3, r3
+        cmp     r3, #9
+        bhi     .L5
+        ldrb    r3, [r0, #1]!   @ zero_extendqisi2
+        cmp     r3, #0
+        bne     .L3
+        movs    r0, #1
+        bx      lr
+.L4:
+        movs    r0, #1
+        bx      lr
+.L5:
+        movs    r0, #0
+        bx      lr
+exhibitor(double, unsigned int):
+        vmov.f64        d19, d0
+        mov     r2, r0
+        cbz     r0, .L10
+        movs    r3, #1
+        vmov.f64        d0, #1.0e+0
+        vmov.f64        d16, d0
+.L9:
+        vmov    s15, r3 @ int
+        vcvt.f64.u32    d18, s15
+        vdiv.f64        d17, d19, d18
+        vmul.f64        d16, d16, d17
+        vadd.f64        d0, d0, d16
+        adds    r3, r3, #1
+        cmp     r2, r3
+        bcs     .L9
+        bx      lr
+.L10:
+        vmov.f64        d0, #1.0e+0
+        bx      lr
+foo():
+        movw    r3, #34464
+        movt    r3, 1
+.L13:
+        subs    r3, r3, #1
+        bne     .L13
+        bx      lr
+.LC0:
+        .ascii  "incorect data!\000"
+.LC1:
+        .ascii  "%lf\000"
+main:
+        push    {r4, r5, r6, lr}
+        mov     r5, r0
+        mov     r4, r1
+        ldr     r6, [r1, #4]
+        mov     r0, r6
+        bl      is_digit(char*)
+        cbz     r0, .L16
+        ldr     r0, [r4, #8]
+        bl      is_digit(char*)
+        eor     r3, r0, #1
+        cmp     r5, #3
+        it      ne
+        orrne   r3, r3, #1
+        tst     r3, #255
+        beq     .L17
+.L16:
+        movw    r0, #:lower16:.LC0
+        movt    r0, #:upper16:.LC0
+        bl      puts
+.L18:
+        movs    r0, #0
+        pop     {r4, r5, r6, pc}
+.L17:
+        movs    r2, #10
+        movs    r1, #0
+        mov     r0, r6
+        bl      strtoll
+        mov     r5, r0
+        movs    r2, #10
+        movs    r1, #0
+        ldr     r0, [r4, #8]
+        bl      strtoll
+        vmov    s0, r0  @ int
+        mov     r0, r5
+        vcvt.f64.s32    d0, s0
+        bl      exhibitor(double, unsigned int)
+        vmov    r2, r3, d0
+        movw    r0, #:lower16:.LC1
+        movt    r0, #:upper16:.LC1
+        bl      printf
+        b       .L18

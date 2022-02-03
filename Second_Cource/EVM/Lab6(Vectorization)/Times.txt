@@ -1,0 +1,4 @@
+N = 2048   M = 10
+withoutvect - 315 sec
+withvect - 65 sec
+BLAS - 10 sec
