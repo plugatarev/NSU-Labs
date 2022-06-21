@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
     double* x = getVectorX();
     double* A_MPI = getArray(SIZE * numberOfRows[rank]); //кусок матрицы процесса
     double* y_MPI = getArray(numberOfRows[rank]);        //Ax-b  для каждого процесса
-    double* Ax = getArray(numberOfRows[rank]);       //произведение Ax
+    double* Ax = getArray(numberOfRows[rank]);           //произведение Ax
     double* y = getArray(SIZE);                          //Ax-b  собранный
     fill_matrix(A_MPI, shift[rank], numberOfRows[rank]);
     double normB = norm(b);

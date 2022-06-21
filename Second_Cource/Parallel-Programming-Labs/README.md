@@ -1,4 +1,4 @@
-### Laboratory work on the course "parallel programming" NSU
+### Laboratory work on the course "Parallel Programming" NSU
  1. Solving a system of linear algebraic equations by simple iteration using MPI.
  2. Solving a system of linear algebraic equations by simple iteration using OpenMP
  3. Matrix-to-matrix multiplication in MPI 2D lattice.
