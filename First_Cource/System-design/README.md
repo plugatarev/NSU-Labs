@@ -1,1 +1,1 @@
-Лабораторные работы по курсу "Цифровая схемотехника" НГУ
+Laboratory work on the course "Digital Circuit Engineering" NSU
