@@ -10,7 +10,7 @@ void* threadFunction(void* param){
     }
 }
 
-int main(int argc, char ** argv) {
+int main(int argc, char** argv) {
     pthread_t thread;
     int error = pthread_create(&thread, NULL, threadFunction, NULL);
     if (error != SUCCESS){
