@@ -5,19 +5,17 @@ public record Solver(double a, double b, double c, double eps) {
     private static final double REAL_ZERO = 0.0;
     private static final Double INFINITY = null;
 
-    public static List<Double> solve(int a, int b, int c, double eps) {
+    public static void solveEquation(int a, int b, int c, double eps) {
         Solver solver = new Solver(a, b, c, eps);
-        return solver.solve();
+        solver.solve();
     }
 
-    private List<Double> solve() {
-        List<Double> roots = new ArrayList<>();
+    private void solve() {
         List<Interval> intervals = localizeRoots();
-        System.out.println(intervals.size());
         for (Interval interval : intervals) {
-            roots.add(findRoot(interval));
+            double root = findRoot(interval);
+            System.out.printf("Корень уравнения х=%f; f(%f)=%f\n", root, root, getValueFunction(root));
         }
-        return roots;
     }
 
     private double findRoot(Interval interval) {
@@ -145,10 +143,6 @@ public record Solver(double a, double b, double c, double eps) {
 
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
-        List<Double> roots = solve(in.nextInt(), in.nextInt(), in.nextInt(), in.nextDouble());
-        System.out.printf("Корней у уравнения %d: ", roots.size());
-        for (double root : roots) {
-            System.out.print(root + "; ");
-        }
+        solveEquation(in.nextInt(), in.nextInt(), in.nextInt(), in.nextDouble());
     }
 }
