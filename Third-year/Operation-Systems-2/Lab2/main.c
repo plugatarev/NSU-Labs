@@ -22,16 +22,20 @@ void* printLines(void* param){
     return NULL;
 }
 
-int main(int argc, char** argv) {
+int main() {
     pthread_t thread;
-    int error = pthread_create(&thread, NULL, printLines, CHILD_MESSAGE);
-    if (error != SUCCESS){
+    int errorCode = pthread_create(&thread, NULL, printLines, CHILD_MESSAGE);
+    if (errorCode != SUCCESS){
         perror("pthread_create");
     }
 
-    pthread_join(thread, NULL);
+    errorCode = pthread_join(thread, NULL);
+    if (errorCode != SUCCESS) {
+        perror("pthread_join");
+        return errorCode;
+    }
 
     printLines(PARENT_MESSAGE);
 
-    pthread_exit(NULL);
+    return SUCCESS;
 }
