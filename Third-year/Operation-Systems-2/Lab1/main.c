@@ -22,7 +22,7 @@ void* printLines(void* param){
     return NULL;
 }
 
-int main(int argc, char** argv) {
+int main() {
     pthread_t thread;
     int errorCode = pthread_create(&thread, NULL, printLines, CHILD_MESSAGE);
     if (errorCode != SUCCESS) {
@@ -31,6 +31,6 @@ int main(int argc, char** argv) {
     }
     
     printLines(PARENT_MESSAGE);
+
     pthread_exit(NULL);
-    return SUCCESS;
 }
