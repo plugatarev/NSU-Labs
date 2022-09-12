@@ -6,11 +6,13 @@
 #define LINES_COUNT 10
 #define CHILD_MESSAGE "child"
 #define PARENT_MESSAGE "parent"
+#define EXIT_ERROR 1
+#define ERROR (void*)1
 
 void* printLines(void* param){
     if (param == NULL) {
         printf("Unexpected argument value: NULL");
-        return NULL;
+        return ERROR;
     }
 
     char* line = (char*) param;
@@ -35,7 +37,8 @@ int main() {
         return errorCode;
     }
 
-    printLines(PARENT_MESSAGE);
+    void* error = printLines(PARENT_MESSAGE);
+    if (error == ERROR) return EXIT_ERROR;
 
     return SUCCESS;
 }
