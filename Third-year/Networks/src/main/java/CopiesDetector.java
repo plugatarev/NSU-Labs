@@ -2,9 +2,9 @@ import java.io.IOException;
 import java.net.*;
 import java.util.*;
 
-public record CopiesDetector(InetAddress multicastAddress) {
+public record CopiesDetector(InetAddress multicastAddress, NetworkInterface networkInterface) {
     private static final int PORT = 8888;
-    private static final int TIMEOUT = 3000;
+    private static final int TIMEOUT = 2000;
     private static final int DELAY = 0;
     private static final int BUFFER_SIZE = 0;
 
@@ -12,20 +12,21 @@ public record CopiesDetector(InetAddress multicastAddress) {
 
     private static final Timer sendTimer = new Timer(true);
 
-    public static void detectCopies(InetAddress multicastAddress) {
-        CopiesDetector detector = new CopiesDetector(multicastAddress);
+    public static void detectCopies(InetAddress multicastAddress, NetworkInterface networkInterface) {
+        CopiesDetector detector = new CopiesDetector(multicastAddress, networkInterface);
         detector.detectCopies();
     }
 
     private void detectCopies() {
         try (MulticastSocket receiveSocket = new MulticastSocket(PORT);
-             DatagramSocket sendSocket = new DatagramSocket()) {
+             MulticastSocket sendSocket = new MulticastSocket()) {
 
-            receiveSocket.joinGroup(multicastAddress);
+            receiveSocket.joinGroup(new InetSocketAddress(multicastAddress, PORT), networkInterface);
             receiveSocket.setSoTimeout(TIMEOUT);
+            setSendTimer(sendSocket, multicastAddress);
+            sendSocket.setNetworkInterface(networkInterface);
 
-            Hashtable<SocketAddress, Long> activeCopies = new Hashtable<>();
-            setTimer(sendSocket, multicastAddress);
+            HashMap<SocketAddress, Long> activeCopies = new HashMap<>();
             while (true) {
                 boolean isConnectAddress = isConnectAddressTo(receiveSocket, activeCopies);
                 boolean isDisconnectAddress = isDisconnectAddress(activeCopies);
@@ -39,7 +40,7 @@ public record CopiesDetector(InetAddress multicastAddress) {
         }
     }
 
-    private boolean isConnectAddressTo(MulticastSocket receiveSocket, Hashtable<SocketAddress, Long> activeCopies) throws IOException {
+    private boolean isConnectAddressTo(MulticastSocket receiveSocket, HashMap<SocketAddress, Long> activeCopies) throws IOException {
         DatagramPacket receivePacket = new DatagramPacket(buffer, BUFFER_SIZE);
         try {
             receiveSocket.receive(receivePacket);
@@ -52,9 +53,9 @@ public record CopiesDetector(InetAddress multicastAddress) {
         return false;
     }
 
-    private boolean isDisconnectAddress(Hashtable<SocketAddress, Long> activeCopies) {
+    private boolean isDisconnectAddress(HashMap<SocketAddress, Long> activeCopies) {
         for (Map.Entry<SocketAddress, Long> currentEntry : activeCopies.entrySet()) {
-            if (System.currentTimeMillis() - currentEntry.getValue() > 3 * TIMEOUT) {
+            if (System.currentTimeMillis() - currentEntry.getValue() > 2 * TIMEOUT) {
                 SocketAddress curSocketAddress = currentEntry.getKey();
                 System.out.println("Copy disconnected with address:" + curSocketAddress);
                 activeCopies.remove(curSocketAddress);
@@ -64,14 +65,14 @@ public record CopiesDetector(InetAddress multicastAddress) {
         return false;
     }
 
-    private void printActiveCopies(Hashtable<SocketAddress, Long> activeCopies) {
+    private void printActiveCopies(HashMap<SocketAddress, Long> activeCopies) {
         System.out.println(activeCopies.size() + " copies were detected:");
         for (SocketAddress address : activeCopies.keySet()) {
             System.out.println("Copy with address: " + address);
         }
     }
 
-    private void setTimer(DatagramSocket socket, InetAddress multicastAddress) {
+    private void setSendTimer(DatagramSocket socket, InetAddress multicastAddress) {
         sendTimer.schedule(new TimerTask() {
             @Override
             public void run() {
