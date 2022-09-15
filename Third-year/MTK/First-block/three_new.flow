@@ -1,0 +1,43 @@
+fib1(n : int) -> [int] {
+    if (n <= 0) {
+        [];
+    }
+    else if (n == 1) {
+        [0];
+    } 
+    else if (n == 2) {
+        [0, 1];
+    }
+    else {
+        x = fib1(n - 1);
+        concat(x, [x[n - 2] + x[n - 3]])
+    }
+}
+
+fib2_tail(n:int, a : [int]) -> [int] {
+    if (n <= 2) {
+        a;
+    }
+    else {
+        fib2_tail(n - 1, concat(a, [a[length(a)-1] + a[length(a)-2]]));
+    }
+}
+
+fib2(n : int) {
+    fib2_tail(n, [0, 1]);
+}
+
+fib3_test(n : int) {
+    r : ref [int] = ref [0, 1];
+    fib3_tail(n, r);
+}
+
+fib3_tail(n : int, a : ref [int]) -> [int] {
+    if (n <= 2) {
+        ^a;
+    }
+    else {
+        refArrayPush(a, ^a[length(^a) - 1] + ^a[length(^a) - 2]);
+        fib3_tail(n - 1, a);
+    }
+}

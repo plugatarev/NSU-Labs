@@ -1,0 +1,30 @@
+import runtime;
+import ds/tree;
+import string;
+
+inds(array : [int], m : int) -> [Pair<int, int>] {
+    tree  = foldi(array, makeTree(), \i, s, n_i -> {
+        switch (lookupTree(s, n_i)) {
+            Some(v):  setTree(s, n_i, concat(v, [i]));
+            None(): setTree(s, n_i, [i]);
+        }
+    }
+    );
+
+    foldi(array, [], \i, s, n_i -> {
+        switch (lookupTree(tree, m - n_i)) {
+            Some(v): concat(s, map(v, \j -> Pair(i, j)));
+            None(): s;
+        }
+    }
+    )
+}
+
+main (){
+    array = [5, 5 ,5, 5, 5, 5, 5, 5, 5, 5];
+    m = 10;
+    result = inds(array, m);
+    str_arr : [string] = map(result, \i -> "(" + i2s(i.first) + " " + i2s(i.second) + ")");
+    str : string = strGlue(str_arr, ",");
+    println(str);
+}

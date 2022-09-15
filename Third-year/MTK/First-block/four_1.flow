@@ -1,0 +1,25 @@
+import runtime;
+import string;
+
+inds(arr : [int], m : int) -> [Pair<int, int>] {
+    foldi(arr, [], \i, s1, n_i -> {
+            foldi(arr, s1, \j, s2, n_j -> {
+                if (n_i + n_j == m ) {
+                    concat(s2, [Pair(i, j)]);
+                } else {
+                    s2;
+                }
+            }
+            );
+        }
+        );
+}
+
+main (){
+    array = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    m = 15;
+    result = inds(array, m);
+    str_arr : [string] = map(result, \i -> "(" + i2s(i.first) + " " + i2s(i.second) + ")");
+    str : string = strGlue(str_arr, ",");
+    println(str);
+}

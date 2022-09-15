@@ -1,0 +1,56 @@
+import runtime;
+
+fib1(n : int) -> [int] {
+    if (n <= 0) {
+        []
+    }
+    else if (n == 1) {
+        [0];
+    }
+    else if (n == 2) {
+        [0, 1];
+    }
+    else {
+        arr = fib1(n - 1);
+        sum = fold(arr, 0, \s, elem -> s + elem);
+	    concat (arr, [sum - arr[n - 2] + 1]);
+    }
+}
+
+fib2_help(k : int, n : int, arr : [int]) -> [int] {
+    if (k >= n) {
+        arr;
+    }
+    else {
+        fib2_help(k + 1, n, concat(arr, [arr[k - 1] + arr[k - 2]]));
+    }
+}
+
+fib2(n : int) -> [int] {
+    if (n <= 0) {
+        [];
+    }
+    else if (n == 1) {
+        [0];
+    }
+    else {
+        fib2_help(2, n, [0, 1]);
+    }
+}
+
+fib3_help(n : int, a : int, b : int, res : ref [int]) -> int {
+    refArrayPush(res, a);
+    if (n > 0) {
+        fib3_help(n - 1, b, a + b, res);
+    }
+    else {
+        a;
+    }
+}
+
+
+main() {
+    15 |> fib1 |> println;
+    15 |> fib2 |> println;
+    15 |> fib3 |> println;
+}

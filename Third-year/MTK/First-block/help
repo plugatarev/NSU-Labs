@@ -1,0 +1,53 @@
+flowc1 one.flow jar=one.jar
+java -jar one.jar
+
+
+i2s - конвертация числа в строку
+
+r : ref double = ref 1.0;
+old = ^r;
+r := 2.0
+
+refArrayPush : (ref[?], ?) -> void - кладет значение в массив
+
+
+fib1(n : int) -> [int] {
+    if (n <= 0) [];
+    else if (n == 1) [0];
+    else if (n == 2) [0, 1];
+    else {
+        x = fib1(n - 1);
+        concat(x, [x[n - 2] + x[n - 3]])
+    }
+}
+
+fib2_tail(n:int, a : [int]) -> [int] {
+    if (n <= 2) {
+        a;
+    }
+    else {
+        fib2_tail(n - 1, concat(a, [a[length(a)-1] + a[length(a)-2]]));
+    }
+}
+
+fib2(n : int) {
+    fib2_tail(n, [0, 1]);
+}
+
+fib3_tail(n : int, a : ref [int]) -> [int] {
+    if (n <= 2) {
+        ^a;
+    }
+    else {
+        fib3_tail(n - 1, refArrayPush(a, ^a[length(^a) - 1] + ^a[length(^a) - 2]));
+    }
+}
+
+
+//номер итерации, куда накапливается результат, эл-т массива
+
+makeTree : () -> Tree<?, ??> - создает пустое дерево
+
+setTree : (tree : Tree<?, ??>, key : ?, value : ??) -> Tree<?, ??> - добавление в дерево
+
+lookup : (tree : Tree<?, ??>, key : ?) -> Maybe<??> - поиск в дереве

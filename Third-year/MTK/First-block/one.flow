@@ -1,5 +1,11 @@
 import runtime;
+import ds/array;
+import string;
 
 main() {
-    println("Hello world");
+    int_arr : [int] = [1, 2, 3];
+    str_arr : [string] = map(int_arr, \i -> i2s(i));
+    str : string = strGlue(str_arr, ",");
+    println(str);
 }
+
