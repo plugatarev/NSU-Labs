@@ -1,11 +1,11 @@
 import java.util.*;
 
 public record Solver(double a, double b, double c, double eps) {
-    private static final int DELTA = 1;
+    private static final double DELTA = 1.7;
     private static final double REAL_ZERO = 0.0;
     private static final Double INFINITY = null;
 
-    public static void solveEquation(int a, int b, int c, double eps) {
+    public static void solveEquation(double a, double b, double c, double eps) {
         Solver solver = new Solver(a, b, c, eps);
         solver.solve();
     }
@@ -28,24 +28,15 @@ public record Solver(double a, double b, double c, double eps) {
         double leftBorder = interval.leftBorder();
         double rightBorder = interval.rightBorder();
         double middle = (leftBorder + rightBorder) / 2;
-
-        if (getValueFunction(leftBorder) <= -eps && getValueFunction(rightBorder) >= eps) {
+        if (Math.abs(getValueFunction(leftBorder)) <= eps) return leftBorder;
+        if (Math.abs(getValueFunction(rightBorder)) <= eps) return rightBorder;
+        if (getValueFunction(leftBorder) * getValueFunction(rightBorder) < 0) {
             while (Math.abs(getValueFunction(middle)) >= eps) {
-                if (getValueFunction(middle) <= -eps) {
+                if ( (getValueFunction(middle) <= -eps && getValueFunction(leftBorder) <= -eps)  ||
+                        (getValueFunction(middle) >= eps && getValueFunction(leftBorder) >= eps) ) {
                     leftBorder = middle;
                 } else {
                     rightBorder = middle;
-                }
-                middle = (leftBorder + rightBorder) / 2;
-            }
-        }
-        else if (getValueFunction(leftBorder) >= eps && getValueFunction(rightBorder) <= -eps) {
-            while (Math.abs(getValueFunction(middle)) >= eps) {
-                double a = getValueFunction(middle);
-                if (a <= -eps) {
-                    rightBorder = middle;
-                } else {
-                    leftBorder = middle;
                 }
                 middle = (leftBorder + rightBorder) / 2;
             }
@@ -143,6 +134,6 @@ public record Solver(double a, double b, double c, double eps) {
 
     public static void main(String[] args) {
         Scanner in = new Scanner(System.in);
-        solveEquation(in.nextInt(), in.nextInt(), in.nextInt(), in.nextDouble());
+        solveEquation(in.nextDouble(), in.nextDouble(), in.nextDouble(), in.nextDouble());
     }
 }
