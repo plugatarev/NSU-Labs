@@ -7,10 +7,9 @@
 #define SLEEP_TIME_SEC 2
 #define TRUE 1
 
-void* printLine(void* param){
+void* printLine(void* param) {
     while (TRUE) {
         printf("Hello\n");
-        pthread_testcancel();
     }
     return NULL;
 }
