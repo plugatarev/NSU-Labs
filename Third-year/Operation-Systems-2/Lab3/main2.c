@@ -22,7 +22,7 @@ void* printLines(void* param) {
 
 int main() {
     pthread_t threads[THREADS_NUMBER];
-    char* stringArrays[THREADS_NUMBER][STRINGS_NUMBER] = { {"1 ", "2 ", "3\n"}, 
+    static char* stringArrays[THREADS_NUMBER][STRINGS_NUMBER] = { {"1 ", "2 ", "3\n"}, 
                                                            {"4 ", "5 ", "6\n"}, 
                                                            {"9 ", "10 ", "11\n"}, 
                                                            {"12 ", "13 ", "14\n"} 
@@ -35,15 +35,11 @@ int main() {
             perror("pthread_create");
             return errorCode;
         }
-    }
-
-    for (int i = 0; i < THREADS_NUMBER; i++) {
-        errorCode = pthread_join(threads[i], NULL);
+        errorCode = pthread_detach(threads[i]);
         if (errorCode != SUCCESS) {
-            perror("pthread_join");
+            perror("pthread_detach");
             return errorCode;
         }
     }
-
-    return SUCCESS;
+    pthread_exit(NULL);
 }
