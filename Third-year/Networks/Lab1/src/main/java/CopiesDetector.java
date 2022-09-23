@@ -54,15 +54,7 @@ public record CopiesDetector(InetAddress multicastAddress, NetworkInterface netw
     }
 
     private boolean isDisconnectAddress(HashMap<SocketAddress, Long> activeCopies) {
-        for (Map.Entry<SocketAddress, Long> currentEntry : activeCopies.entrySet()) {
-            if (System.currentTimeMillis() - currentEntry.getValue() > 2 * TIMEOUT) {
-                SocketAddress curSocketAddress = currentEntry.getKey();
-                System.out.println("Copy disconnected with address:" + curSocketAddress);
-                activeCopies.remove(curSocketAddress);
-                return true;
-            }
-        }
-        return false;
+        return activeCopies.entrySet().removeIf(e -> System.currentTimeMillis() - e.getValue() > 2 * TIMEOUT);
     }
 
     private void printActiveCopies(HashMap<SocketAddress, Long> activeCopies) {
