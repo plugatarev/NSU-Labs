@@ -13,10 +13,10 @@
 #define END_OF_FILE (void*)2
 #define EXIT_ERROR 1
 
-void* sort(void* param) {
+void* sort(void* param) {   
     if (param == NULL) {
         printf("Unexpected argument value: NULL");
-        return NULL;
+        return ERROR;
     }
 
     char* line = (char*) param;
@@ -36,12 +36,12 @@ char* readLine() {
     unsigned int length = 0;
 
     while (TRUE) {
-        char* ptr = (char*)realloc(line, (length + BUFFER_SIZE) * sizeof(char));
-        if (ptr == NULL) {
+        char* pointer = (char*)realloc(line, (length + BUFFER_SIZE) * sizeof(char));
+        if (pointer == NULL) {
             perror("realloc");
             return ERROR;
         }
-        line = ptr;
+        line = pointer;
 
         char* result = fgets(line + length, BUFFER_SIZE, stdin);
         if (result == NULL) {
@@ -65,28 +65,32 @@ void freeLines(char** lines, int numberLines) {
     }
 }
 
+int readLines(char** lines, int* numberLines) {
+    do {
+        lines[*numberLines] = readLine();
+        if (lines[*numberLines] == ERROR) {
+            freeLines(lines, *numberLines);
+            return EXIT_ERROR;
+        }
+        if (lines[*numberLines] == END_OF_FILE) {
+            break;
+        }
+        (*numberLines)++;
+    } while (*numberLines < MAX_NUM_LINES);
+    return SUCCESS;
+}
+
 int main() {
     int numberLines = 0;
     char* lines[MAX_NUM_LINES];
-    do {
-        lines[numberLines] = readLine();
-        if (lines[numberLines] == ERROR) {
-            freeLines(lines, numberLines);
-            return EXIT_ERROR;
-        }
-        if (lines[numberLines] == END_OF_FILE) {
-            break;
-        }
-        numberLines++;
-    }while (numberLines < MAX_NUM_LINES);
-
+    int errorCode = readLines(lines, &numberLines);
+    if (errorCode == EXIT_ERROR) return errorCode;
     printf("----- SORTING -----\n");
     pthread_t threads[numberLines];
-    int errorCode;
     for (int i = 0; i < numberLines; i++) {
         errorCode = pthread_create(&threads[i], NULL, sort, lines[i]);
         if (errorCode != SUCCESS) {
-            perror("pthread_create");
+            printf("pthread_create");
             freeLines(lines, numberLines);
         }
     }
@@ -94,7 +98,7 @@ int main() {
     for (int i = 0; i < numberLines; i++) {
         errorCode = pthread_join(threads[i], NULL);
         if (errorCode != SUCCESS) {
-            perror("pthread_join");
+            printf("pthread_join");
             freeLines(lines, numberLines);
             return errorCode;
         }
