@@ -1,0 +1,29 @@
+//    private void receiveFile(DataInputStream input, FileOutputStream output, long size) throws IOException {
+//        if (size < BUFFER_SIZE) {
+//            ByteBuffer buffer = readNByte(input, (int)size);
+//            output.write(buffer.array());
+//        }
+//        long iteration = size / BUFFER_SIZE;
+//        long ostBytes = size % BUFFER_SIZE;
+//        ByteCounter counter = new ByteCounter();
+//        for (int i = 0; i < iteration; i++) {
+//            ByteBuffer buffer = readNByte(input, BUFFER_SIZE);
+//            counter.registerBytes(BUFFER_SIZE);
+//            output.write(buffer.array());
+//        }
+//        ByteBuffer buffer = readNByte(input, (int)ostBytes);
+//        output.write(buffer.array());
+//    }
+//
+//    private ByteBuffer readNByte(DataInputStream input, int N) throws IOException {
+//        byte[] buffer = new byte[N];
+//        int numberRead = 0;
+//        do {
+//            int res = input.read(buffer, numberRead, N - numberRead);
+//            if (res < 1) continue;
+//            numberRead += res;
+//        } while (numberRead < N);
+//        ByteBuffer byteBuffer = ByteBuffer.allocate(N);
+//        byteBuffer.put(buffer);
+//        return byteBuffer;
+//    }

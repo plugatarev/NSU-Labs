@@ -1,4 +1,6 @@
 package server;
 
-public class InvalidDataException extends RuntimeException {
+import java.io.IOException;
+
+public class InvalidDataException extends IOException {
 }

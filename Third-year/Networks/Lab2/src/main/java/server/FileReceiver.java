@@ -2,30 +2,47 @@ package server;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Timer;
+import java.util.TimerTask;
 
-public record FileReceiver(int port, Socket socket) implements Runnable {
-    private static final int BUFFER_SIZE = 1024;
+public final class FileReceiver implements Runnable {
+    private static final int BUFFER_SIZE = 512;
+    private static final int INTERVAL = 3000;
+    private final Socket socket;
+    private long countBytesInterval;
+    private long countBytesTotal;
+    private long time;
+
+
+    public FileReceiver(Socket socket) {
+        this.socket = socket;
+    }
 
     @Override
     public void run() {
-        try (DataInputStream input = new DataInputStream(socket.getInputStream())) {
+        long fileSize;
+        long receivedFileSize;
+        try (DataInputStream input = new DataInputStream(socket.getInputStream());
+             DataOutputStream output = new DataOutputStream(socket.getOutputStream())) {
             int filenameLength = receiveFilenameLength(input);
             String filename = receiveFilename(input, filenameLength);
-            long size = receiveFileSize(input);
-            try (FileOutputStream output = createFileOutputStream(filename)) {
-                receiveFile(input, output, size);
+            fileSize = receiveFileSize(input);
+            try (FileOutputStream fileOutputStream = createFileOutputStream(filename)) {
+                receivedFileSize = receiveFile(input, fileOutputStream, fileSize);
             }
+            boolean isCorrect = checkSize(fileSize, receivedFileSize);
+            output.writeBoolean(isCorrect);
         } catch (RuntimeException | IOException e) {
-            e.printStackTrace();
-            System.out.println("File not transferred");
-            return;
+            System.err.println("Thread on port: " + socket.getPort() + " was interrupted with an exception: " + e.getMessage());
         }
-        System.out.println("File transferred");
+    }
+
+    private boolean checkSize(long fileSize, long receivedFileSize) {
+        return fileSize == receivedFileSize && fileSize == countBytesTotal;
     }
 
     private FileOutputStream createFileOutputStream(String fileName) throws IOException {
@@ -35,42 +52,46 @@ public record FileReceiver(int port, Socket socket) implements Runnable {
         return new FileOutputStream(path.toFile());
     }
 
-    private void receiveFile(DataInputStream input, FileOutputStream output, long size) throws IOException {
-        if (size < BUFFER_SIZE) {
-            ByteBuffer buffer = readNByte(input, (int)size);
-            output.write(buffer.array());
+    private long receiveFile(DataInputStream input, FileOutputStream output, long size) throws IOException {
+        int count;
+        byte[] buffer = new byte[BUFFER_SIZE];
+        Timer timer = new Timer();
+        setSpeedMeter(timer);
+        long start = System.currentTimeMillis();
+        while (countBytesTotal < size && (count = input.read(buffer)) > -1) {
+            countBytesInterval += count;
+            countBytesTotal += count;
+            output.write(buffer, 0, count);
         }
-        long iteration = size / BUFFER_SIZE;
-        long ostBytes = size % BUFFER_SIZE;
-        for (int i = 0; i < iteration; i++) {
-            ByteBuffer buffer = readNByte(input, BUFFER_SIZE);
-            output.write(buffer.array());
-        }
-        ByteBuffer buffer = readNByte(input, (int)ostBytes);
-        output.write(buffer.array());
+        System.out.printf("Speed for the entire transmission period: %.2f KB/s\n", (double)(countBytesTotal * 1000) / (1024 * (System.currentTimeMillis() - start)));
+        timer.cancel();
+        return output.getChannel().size();
     }
 
     private long receiveFileSize(DataInputStream input) throws IOException {
         return input.readLong();
     }
 
-    private ByteBuffer readNByte(DataInputStream input, int N) throws IOException {
-        byte[] buffer = new byte[N];
-        int numberRead = 0;
-        do {
-            int res = input.read(buffer, numberRead, N - numberRead);
-            if (res < 1) continue;
-            numberRead += res;
-        } while (numberRead < N);
-        ByteBuffer byteBuffer = ByteBuffer.allocate(N);
-        byteBuffer.put(buffer);
-        return byteBuffer;
+    private void setSpeedMeter(Timer timer) {
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                time += 3000;
+                double speedInterval = (double)(countBytesInterval * 1000) / INTERVAL;
+                double speedIntervalTotal = (double)(countBytesTotal * 1000) / time;
+                System.out.printf("port=" + socket.getPort() + " Current speed: %.2f KB/s\n", speedInterval / 1024);
+                System.out.printf("port=" + socket.getPort() + "Total speed: %.2f KB/s\n", speedIntervalTotal / 1024);
+                countBytesInterval = 0;
+            }
+        }, INTERVAL, INTERVAL);
     }
 
     private String receiveFilename(DataInputStream input, int length) throws IOException {
-        String name = new String(readNByte(input, length).array(), StandardCharsets.UTF_8); //TODO: strange
-        if (name.contains("/") || name.contains("\\")) throw new FilenameException();
-        return name;
+        byte[] buffer = new byte[length];
+        if (input.read(buffer, 0, length) != length) {
+            throw new InvalidDataException();
+        }
+        return new String(buffer, StandardCharsets.UTF_8);
     }
 
     private int receiveFilenameLength(DataInputStream input) throws IOException {

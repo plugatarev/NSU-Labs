@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public final class FileSender {
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 512;
     private final Socket socket;
     private final String filename;
     private final File file;
@@ -20,17 +20,22 @@ public final class FileSender {
 
     void sendFile() {
         try (DataOutputStream socketWriter = new DataOutputStream(socket.getOutputStream());
-             FileInputStream fileStream = new FileInputStream(file)) {
+             FileInputStream fileStream = new FileInputStream(file);
+             DataInputStream input = new DataInputStream(socket.getInputStream())) {
             sendFilenameLength(socketWriter);
             sendFilename(socketWriter);
             sendFileSize(file, socketWriter);
             byte[] buffer = new byte[BUFFER_SIZE];
             int count;
             while ((count = fileStream.read(buffer)) > -1) {
+                Thread.sleep(100);
                 socketWriter.write(buffer, 0, count);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            boolean flag = input.readBoolean();
+            if (flag) System.out.println("File transferred");
+            else System.out.println("File not transferred");
+        } catch (IOException | InterruptedException e) {
+            System.err.println("Client was interrupted with an exception: " + e.getMessage());
         }
     }
 

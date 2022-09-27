@@ -27,7 +27,7 @@ public class Server {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 Socket socket = serverSocket.accept();
-                Thread newClient = new Thread(new FileReceiver(port, socket));
+                Thread newClient = new Thread(new FileReceiver(socket));
                 newClient.start();
             }
         } catch (IOException e) {

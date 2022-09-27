@@ -26,7 +26,7 @@ public class Client {
         } catch (FileNotFoundException e) {
             System.err.println("File " + filename + " not found");
         } catch (IOException e) {
-            System.err.println("Couldn't connect to server, because of exception:: " + e.getMessage());
+            System.err.println("Couldn't connect to server, because of exception: " + e.getMessage());
         }
     }
 
