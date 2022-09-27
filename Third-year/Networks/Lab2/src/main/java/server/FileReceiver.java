@@ -12,6 +12,7 @@ import java.util.TimerTask;
 public final class FileReceiver implements Runnable {
     private static final int BUFFER_SIZE = 512;
     private static final int INTERVAL = 3000;
+    private static final int KILOBYTE = 1024;
     private final Socket socket;
     private long countBytesInterval;
     private long countBytesTotal;
@@ -63,7 +64,8 @@ public final class FileReceiver implements Runnable {
             countBytesTotal += count;
             output.write(buffer, 0, count);
         }
-        System.out.printf("Speed for the entire transmission period: %.2f KB/s\n", (double)(countBytesTotal * 1000) / (1024 * (System.currentTimeMillis() - start)));
+        System.out.printf("Thread on port: " + socket.getPort() + "Speed for the entire transmission period: %.2f KB/s\n",
+                (double)(countBytesTotal * 1000) / (KILOBYTE * (System.currentTimeMillis() - start)));
         timer.cancel();
         return output.getChannel().size();
     }
@@ -79,8 +81,8 @@ public final class FileReceiver implements Runnable {
                 time += 3000;
                 double speedInterval = (double)(countBytesInterval * 1000) / INTERVAL;
                 double speedIntervalTotal = (double)(countBytesTotal * 1000) / time;
-                System.out.printf("port=" + socket.getPort() + " Current speed: %.2f KB/s\n", speedInterval / 1024);
-                System.out.printf("port=" + socket.getPort() + "Total speed: %.2f KB/s\n", speedIntervalTotal / 1024);
+                System.out.printf("port=" + socket.getPort() + " Current speed: %.2f KB/s\n", speedInterval / KILOBYTE);
+                System.out.printf("port=" + socket.getPort() + " Total speed: %.2f KB/s\n", speedIntervalTotal / KILOBYTE);
                 countBytesInterval = 0;
             }
         }, INTERVAL, INTERVAL);

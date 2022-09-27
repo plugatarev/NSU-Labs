@@ -19,7 +19,6 @@ public class Client {
         }
         int port = Integer.parseInt(args[2]);
         try (Socket socket = new Socket()) {
-            socket.setSoTimeout(20000);
             socket.connect(new InetSocketAddress(serverAddress, port));
             FileSender fileSender = new FileSender(socket, filename);
             fileSender.sendFile();
