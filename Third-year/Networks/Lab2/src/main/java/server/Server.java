@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class Server {
+    private static final int BLOCK_TIME = 3000;
+
     public static void main(String[] args) {
         if (args.length != 1) {
             System.err.println("One argument required: <port>");
@@ -27,6 +29,7 @@ public class Server {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             while (true) {
                 Socket socket = serverSocket.accept();
+                socket.setSoTimeout(BLOCK_TIME);
                 Thread newClient = new Thread(new FileReceiver(socket));
                 newClient.start();
             }
