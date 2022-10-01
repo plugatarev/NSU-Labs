@@ -10,8 +10,9 @@
 #define THREADS_MIN 1
 
 typedef struct Limit {
-    int start;
-    int end;
+    long long int start;
+    long long int end;
+    double partPI;
 } Limit;
 
 void* calculatePartPI(void* args){
@@ -21,8 +22,8 @@ void* calculatePartPI(void* args){
     }
 
     Limit* limitsSerial = (Limit*) args;
-    int start = limitsSerial->start;
-    int end = limitsSerial->end;
+    long long int start = limitsSerial->start;
+    long long int end = limitsSerial->end;
     
     double localPI = 0;
     for (int i = start; i < end ; i++) {
@@ -30,31 +31,15 @@ void* calculatePartPI(void* args){
         localPI -= 1.0 / (i*4.0 + 3.0);
     }
 
-    double* resultedLocalPI = (double*) malloc(sizeof(double));
-    if (resultedLocalPI == NULL){
-        perror("malloc");
-        return NULL;
-    }
-    free(limitsSerial);
-    *resultedLocalPI = localPI;
-    return resultedLocalPI;
+    limitsSerial->partPI = localPI;
+    return (void*)(&limitsSerial->partPI);
 }
 
-int createThreadsCalculatingPI(int threadsNumber, pthread_t* threads) {
-    int stepsNumberThread = STEPS_NUMBER / threadsNumber;
-
+int createThreadsCalculatingPI(int threadsNumber, Limit* limitsSerial, pthread_t* threads) {
     for (int i = 0; i < threadsNumber; i++) {
-        Limit* limitsSerial = (Limit*) malloc(sizeof(Limit));
-        if (limitsSerial == NULL){
-            perror("malloc");
-            return ERROR;
-        }
-        limitsSerial->start = i * stepsNumberThread;
-        limitsSerial->end = (i + 1) * stepsNumberThread - 1;
-        int errorCode = pthread_create(&threads[i], NULL, calculatePartPI, (void*) limitsSerial);
+        int errorCode = pthread_create(&threads[i], NULL, calculatePartPI, &(limitsSerial[i]));
         if (errorCode != SUCCESS) {
             perror("pthread_create");
-            free(limitsSerial);
             return errorCode;
         }
     }
@@ -76,23 +61,38 @@ long readThreadsNumber(int argc, char** argv) {
     return threadsNumber;
 }
 
+void fillLimits(Limit* limits, int threadsNumber) {
+    int mainTasks = STEPS_NUMBER / threadsNumber;
+    int ostTasks = STEPS_NUMBER % threadsNumber;
+    int current = 0;
+    for (int i = 0; i < threadsNumber; i++) {
+        int count = mainTasks + (i < ostTasks);
+        limits[i].start = current;
+        limits[i].end = current + count - 1;
+        current+=count;
+    }
+}
+
 int main(int argc, char** argv) {
     long threadsNumber = readThreadsNumber(argc, argv);
     if (threadsNumber == ERROR) return ERROR;
     pthread_t threads[threadsNumber];
 
-    double pi = 0;
-    int errorCode = createThreadsCalculatingPI(threadsNumber, threads);
+    Limit limits[threadsNumber];
+    fillLimits(limits, threadsNumber);
+
+    int errorCode = createThreadsCalculatingPI(threadsNumber, limits, threads);
     if (errorCode != SUCCESS) return errorCode;
+    double pi = 0;
+    
     for (int i = 0; i < threadsNumber; i++) {
         void* partPI;
         errorCode = pthread_join(threads[i], &partPI);
         if (errorCode != SUCCESS) {
-            perror("pthread_join");
+            printf("pthread_join");
             return errorCode;
         }
         pi = pi + *((double*) partPI);
-        free(partPI);
     }
 
     pi = pi * 4.0;
