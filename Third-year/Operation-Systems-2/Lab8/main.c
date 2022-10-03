@@ -3,10 +3,10 @@
 #include <pthread.h>
 #include <string.h>
 
-#define STEPS_NUMBER 200000000
+#define STEPS_NUMBER 2000000000
 #define SUCCESS 0
 #define ERROR -1
-#define COMMAND_ARGUMENT_NUMBER 2
+#define COMMAND_ARGUMENT_COUNT 2
 #define THREADS_MIN 1
 
 typedef struct Limit {
@@ -47,7 +47,7 @@ int createThreadsCalculatingPI(int threadsNumber, Limit* limitsSerial, pthread_t
 }
 
 long readThreadsNumber(int argc, char** argv) {
-    if (argc != COMMAND_ARGUMENT_NUMBER){
+    if (argc != COMMAND_ARGUMENT_COUNT){
         printf("Usage: <program> <threads_number>\n");
         return ERROR;
     }
