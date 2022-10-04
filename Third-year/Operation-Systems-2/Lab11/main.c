@@ -13,6 +13,7 @@
 #define FIRST_MUTEX 0
 #define SECOND_MUTEX 1
 #define THIRD_MUTEX 2
+#define SLEEP_TIME 2
 
 int lock_mutex(pthread_mutex_t* mutex) {
     if (mutex == NULL) {
@@ -20,11 +21,10 @@ int lock_mutex(pthread_mutex_t* mutex) {
         return ERROR;
     }
     int error_code = pthread_mutex_lock(mutex);
-    if (error_code != SUCCESS && errno == EINVAL) {
+    if (error_code != SUCCESS) {
         perror("lock_mutex");
         return ERROR;
     }
-    errno = 0;
     return SUCCESS;
 }
 
@@ -34,11 +34,10 @@ int unlock_mutex(pthread_mutex_t* mutex) {
         return ERROR;
     }
     int error_code = pthread_mutex_unlock(mutex);
-    if (error_code != SUCCESS && errno == EINVAL) {
+    if (error_code != SUCCESS) {
         perror("unlock_mutex");
         return ERROR;
     }
-    errno = 0;
     return SUCCESS;
 }
 
@@ -111,7 +110,6 @@ int destroy_mutexes(pthread_mutex_t* mutexes) {
     return SUCCESS;
 }
 
-
 int main() {
     pthread_mutex_t mutexes[MUTEX_COUNT];
     int error_code = init_mutexes(mutexes);
@@ -125,12 +123,12 @@ int main() {
         perror("pthread_create");
         return error_code;
     }
-    sleep(2);
+    sleep(SLEEP_TIME);
     parent_print(mutexes);
 
     error_code = pthread_join(thread, NULL);
     if (error_code != SUCCESS) {
-        perror("pthread_join");
+        printf("pthread_join");
         return error_code;
     }
 
@@ -139,5 +137,3 @@ int main() {
 
     return SUCCESS;
 }
-//compare and swap
-//imlp mutex
