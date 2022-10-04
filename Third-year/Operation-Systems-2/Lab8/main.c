@@ -80,6 +80,7 @@ int main(int argc, char** argv) {
 
     Limit limits[threadsNumber];
     fillLimits(limits, threadsNumber);
+    printf("%lld %lld", limits[0].start, limits[threadsNumber - 1].end);
 
     int errorCode = createThreadsCalculatingPI(threadsNumber, limits, threads);
     if (errorCode != SUCCESS) return errorCode;
