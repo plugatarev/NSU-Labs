@@ -33,7 +33,7 @@ public final class FileReceiver implements Runnable {
             }
             boolean isCorrect = checkSize(fileSize, receivedFileSize);
             output.writeBoolean(isCorrect);
-        } catch (RuntimeException | IOException e) {
+        } catch (IOException e) {
             System.err.println("Thread on port: " + socket.getPort() + " was interrupted with an exception: " + e.getMessage());
         }
     }
@@ -84,13 +84,14 @@ public final class FileReceiver implements Runnable {
         System.out.printf("port=" + socket.getPort() + " Total speed: %.2f KB/s\n", speedIntervalTotal);
     }
 
-
     private String receiveFilename(DataInputStream input, int length) throws IOException {
         byte[] buffer = new byte[length];
-        if (input.readNBytes(buffer, 0, length) != length) { //TODO - ok
+        if (input.readNBytes(buffer, 0, length) != length) {
             throw new InvalidDataException("Filename length has incorrect size");
         }
-        return new String(buffer, StandardCharsets.UTF_8);
+        String fileName = new String(buffer, StandardCharsets.UTF_8);
+        if (fileName.contains("/") || fileName.contains("\\")) throw new InvalidDataException("File name must not contain '/' and '\\'");
+        return fileName;
     }
 
     private int receiveFilenameLength(DataInputStream input) throws IOException {
