@@ -1,0 +1,84 @@
+import lingo/pegcode/driver;
+import flowstructs;
+
+//String -> RPN -> calculate
+//           |
+//        String
+
+//normal expression -> RPN expression
+
+ArExpr ::= ArSum, ArMult, ArInt;
+    ArSum(lhs:ArExpr, rhs:ArExpr);
+    ArMult(lhs:ArExpr, rhs:ArExpr);
+    ArInt(val:int);
+
+RPN ::= Digit, Operator;
+    Operator ::= Sum, Mult;
+    Digit(var:int);
+    Sum();
+    Mult();
+
+s2ar(str: string) -> ArExpr {
+    e_gr = "#include rule.lingo";
+    parsic(
+        compilePegGrammar(e_gr),
+        str,
+        defaultPegActions
+    );
+}
+
+ar2s(exp: ArExpr) -> string {
+    switch (exp) {
+        ArSum(lhs, rhs) : ar2s(lhs) + " " + ar2s(rhs) + " +";
+        ArMult(lhs, rhs) : ar2s(lhs) + " " + ar2s(rhs) + " *";
+        ArInt(val): i2s(val);
+    }
+}
+
+ar2rpn(exp: ArExpr) -> [RPN] {
+    switch(exp) {
+        ArInt(v): {
+            [Digit(v)];
+        }
+        ArMult(l,r): {
+            concat(concat(ar2rpn(l), ar2rpn(r)), [Mult()]);
+        }
+        ArSum(l,r): {
+            concat(concat(ar2rpn(l), ar2rpn(r)), [Sum()]);
+        }
+    } 
+}
+
+solve(expr: ArExpr) -> int {
+    switch (expr) {
+        ArSum(lhs, rhs) : solve(lhs) + solve(rhs);
+        ArMult(lhs, rhs) : solve(lhs) * solve(rhs);
+        ArInt(val): val;
+    }
+}
+
+rpn2i(expr : [RPN])-> int{
+	fold(expr, [], \stack, el -> {
+		switch (el) {
+			Digit(val):
+				concat(stack, [val]);
+			Sum(): {
+				newstack = concat(stack, [stack[length(stack) - 1] + stack[length(stack) - 2]]);
+				removeRange(newstack, length(newstack) - 3, 2);
+			}
+			Mult(): {
+				newstack = concat(stack, [stack[length(stack) - 1] * stack[length(stack) - 2]]);
+				removeRange(newstack, length(newstack) - 3, 2);
+			}
+		}
+	})[0]
+}
+
+main() {
+    example = "(((1 * (2 + 10)) + (8 * 2)) + 3)";
+    rpn = ar2s(s2ar(example));
+    arr = s2a2(rpn, " ", \s -> s);
+    println(rpn);
+    println(solve(s2ar(example)));
+    println(rpn2i(ar2rpn(s2ar(example))));
+}
