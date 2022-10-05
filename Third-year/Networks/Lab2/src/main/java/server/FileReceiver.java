@@ -11,7 +11,7 @@ public final class FileReceiver implements Runnable {
     private static final int BUFFER_SIZE = 512;
     private static final int INTERVAL = 3000;
     private static final int KILOBYTE = 1024;
-    private static final int MILISEK = 1000000;
+    private static final int MILLION = 1000000;
     private final Socket socket;
     private long countBytesTotal;
 
@@ -53,15 +53,13 @@ public final class FileReceiver implements Runnable {
         int count;
         byte[] buffer = new byte[BUFFER_SIZE];
         long countBytesInterval = 0;
-        long start = System.nanoTime() / MILISEK;
+        long start = System.nanoTime() / MILLION;
         long prev = start;
         while (countBytesTotal < size && (count = input.read(buffer)) > -1) {
             countBytesInterval += count;
             countBytesTotal += count;
-            long curTime = System.nanoTime() / MILISEK;
+            long curTime = System.nanoTime() / MILLION;
             if (curTime - prev >= INTERVAL) {
-                System.out.println(countBytesTotal);
-                System.out.println("time = " + (curTime - prev));
                 double speedInterval = (double)(countBytesInterval * 1000) / (KILOBYTE * (curTime - prev));
                 double speedIntervalTotal = (double)(countBytesTotal * 1000) / (KILOBYTE * (curTime - start));
                 printSpeed(speedInterval, speedIntervalTotal);
@@ -90,7 +88,9 @@ public final class FileReceiver implements Runnable {
             throw new InvalidDataException("Filename length has incorrect size");
         }
         String fileName = new String(buffer, StandardCharsets.UTF_8);
-        if (fileName.contains("/") || fileName.contains("\\")) throw new InvalidDataException("File name must not contain '/' and '\\'");
+        if (fileName.contains("/") || fileName.contains("\\")) {
+            throw new InvalidDataException("File name must not contain '/' and '\\'");
+        }
         return fileName;
     }
 
