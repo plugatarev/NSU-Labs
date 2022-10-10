@@ -24,13 +24,13 @@ void* child_print(void* param) {
         return NULL;
     }
     Context* context = (Context*) param;
-    for (int i = 0; i < LINES_COUNT; i++){
+    for (int i = 0; i < LINES_COUNT; i++) {
         int error_code = pthread_mutex_lock(context->mutex);
         if (error_code != SUCCESS) {
             perror("pthread_mutex_lock");
             return ERROR_CODE;
         }
-        while (*(context->is_parent)){
+        while (*(context->is_parent)) {
             error_code = pthread_cond_wait(context->conditional_variable, context->mutex);
             if (error_code != SUCCESS) {
                 perror("pthread_cond_wait");
@@ -69,6 +69,8 @@ int parent_print(Context* context) {
         }
         *(context->is_parent) = FALSE;
         printf(PARENT_MESSAGE);
+        //В ином случае переменная состояния может измениться между тестированием соответствующего состояния 
+        //и блокировкой в вызове pthread_cond_wait(), что может вызвать бесконечное ожидание. 
         error_code = pthread_cond_signal(context->conditional_variable);
         if (error_code != SUCCESS) {
             perror("pthread_cond_signal");
