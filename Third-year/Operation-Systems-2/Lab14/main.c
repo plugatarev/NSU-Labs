@@ -39,7 +39,6 @@ void* child_print(void* param) {
             return ERROR_CODE;
         }
     }
-
     pthread_exit(NULL);
 }
 

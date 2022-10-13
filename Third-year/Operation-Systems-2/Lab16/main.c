@@ -4,7 +4,7 @@
 #include <semaphore.h>
 #include <fcntl.h>
 
-#define LINES_COUNT 10
+#define LINES_COUNT 5
 #define ERROR -1
 #define CHILD 0
 #define PARENT 1
@@ -16,7 +16,7 @@
 #define PARENT_MESSAGE "parent\n"
 
 int child_print(sem_t* semaphore_1, sem_t* semaphore_2) {
-    for (int i = 0; i < LINES_COUNT; ++i){
+    for (int i = 0; i < LINES_COUNT; i++){
         int error_code = sem_wait(semaphore_1);
         if (error_code != SUCCESS) {
             perror("sem_wait");
@@ -33,15 +33,15 @@ int child_print(sem_t* semaphore_1, sem_t* semaphore_2) {
 }
 
 int parent_print(sem_t* semaphore_1, sem_t* semaphore_2) {
-    for (int i = 0; i < LINES_COUNT; ++i){
+    for (int i = 0; i < LINES_COUNT; i++){
         int error_code = sem_wait(semaphore_2);
-        if (error_code != SUCCESS) {
+        if (error_code == ERROR) {
             perror("sem_wait");
             return ERROR;
         }
         printf(PARENT_MESSAGE);
         error_code = sem_post(semaphore_1);
-        if (error_code != SUCCESS) {
+        if (error_code == ERROR) {
             perror("sem_post");
             return ERROR;
         }
@@ -67,14 +67,13 @@ int main() {
     sem_t* semaphore_1 = sem_open("sem1", O_CREAT, FILE_PERMISSIONS, VALUE_ZERO);
     if (semaphore_1 == SEM_FAILED) {
         perror("sem_open 1");
-        return SEM_FAILED;
+        return ERROR;
     }
     sem_t* semaphore_2 = sem_open("sem2", O_CREAT, FILE_PERMISSIONS, VALUE_ONE);
     if (semaphore_2 == SEM_FAILED) {
         perror("sem_open 2");
-        return SEM_FAILED;
+        return ERROR;
     }
-
     pid_t pid = fork();
     if (pid == ERROR) {
         perror("fork");
@@ -84,10 +83,10 @@ int main() {
         int error_code = child_print(semaphore_1, semaphore_2);
         if (error_code != SUCCESS) return error_code;
     }
-    else if (pid == PARENT) {
+    else {
         int error_code = parent_print(semaphore_1, semaphore_2);
         if (error_code != SUCCESS) return error_code;
-        error_code = semaphores_close(semaphore_1, semaphore_2);
+        error_code = semathores_close(semaphore_1, semaphore_2);
         if (error_code == ERROR) return error_code;
     }
     return SUCCESS;
