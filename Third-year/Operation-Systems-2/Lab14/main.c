@@ -26,7 +26,7 @@ void* child_print(void* param) {
     }
     Semaphores* sems = (Semaphores*)param;
 
-    for (int i = 0; i < LINES_COUNT; ++i){
+    for (int i = 0; i < LINES_COUNT; i++){
         int error_code = sem_wait(sems->semaphore_1);
         if (error_code != SUCCESS) {
             perror("sem_wait");
@@ -44,14 +44,14 @@ void* child_print(void* param) {
 }
 
 int parent_print(Semaphores* sems) {
-    for (int i = 0; i < LINES_COUNT; ++i){
-        int error_code = sem_wait(sems->semaphore_2); // -1 блокируется если ноль, меньше нуля не бывает
+    for (int i = 0; i < LINES_COUNT; i++){
+        int error_code = sem_wait(sems->semaphore_2);
         if (error_code != SUCCESS) {
             perror("sem_wait");
             return error_code;
         }
         printf(PARENT_MESSAGE);
-        error_code = sem_post(sems->semaphore_1); // +1
+        error_code = sem_post(sems->semaphore_1);
         if (error_code != SUCCESS) {
             perror("sem_post");
             return error_code;
@@ -85,6 +85,5 @@ int main() {
     if (error_code != SUCCESS) {
         return error_code;
     }
-
     pthread_exit(NULL);
 }

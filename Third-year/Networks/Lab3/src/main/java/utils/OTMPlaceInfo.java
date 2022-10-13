@@ -1,5 +1,8 @@
 package utils;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Getter;
+
 @Getter
 @JsonIgnoreProperties(ignoreUnknown = false)
 public class OtmPlaceInfo {
@@ -10,14 +13,14 @@ public class OtmPlaceInfo {
 
     public static class OtmInfo {
         @Getter
-        String descr;
+        String description;
     }
 
     @Override
     public String toString() {
         String desc = name + "\n" + address.toString() + "\n";
         if (info != null) {
-            desc += formattedDescr(info.getDescr());
+            desc += formattedDescr(info.getDescription());
         } else {
             desc += "No description was found for this place\n";
         }

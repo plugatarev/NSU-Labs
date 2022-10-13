@@ -1,0 +1,14 @@
+Дейкстра предложил использовать целочисленную переменную для подсчета количества активизаций, отложенных на будущее.
+
+Он предложил учредить новый тип переменной — семафор (semaphore). Значение
+семафора может быть равно 0, что будет свидетельствовать об отсутствии сохраненных
+активизаций, или иметь какое-нибудь положительное значение, если ожидается не
+менее одной активизации.
+
+sem_post
+sem is not a valid semaphore. 
+The maximum allowable value for a semaphore would be exceeded.
+
+sem_wait
+The call was interrupted by a signal handler; see signal(7). 
+sem is not a valid semaphore. 
