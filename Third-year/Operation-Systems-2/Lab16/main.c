@@ -1,13 +1,11 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <string.h>
 #include <semaphore.h>
 #include <fcntl.h>
 
 #define LINES_COUNT 5
 #define ERROR -1
 #define CHILD 0
-#define PARENT 1
 #define SUCCESS 0
 #define VALUE_ONE 1
 #define VALUE_ZERO 0
