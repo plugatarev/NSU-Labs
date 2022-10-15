@@ -36,3 +36,34 @@ Unix-системам проверяются права доступа к фай
 Стандартного API для получения списка именованных семафоров, существующих в системе, не существует.  
 Разумеется, полный список этих объектов существует в ядре и может быть получен через API для доступа 
 к структурам данных ядра, но эти API различаются в разных операционных системах.
+
+sem_open - initialize and open a named semaphore
+The owner (user ID) of the semaphore is set to the effective user ID of the calling process
+If O_CREAT is specified in oflag, then two additional arguments must besupplied.  
+The mode argument specifies the permissions to be placed on the new semaphore, as for open(2).
+
+ERRORS
+       EACCES The semaphore exists, but the caller does not have permission to open it.
+
+       EEXIST Both O_CREAT and O_EXCL were specified in oflag, but a semaphore with this name already exists.
+
+       EINVAL value was greater than SEM_VALUE_MAX.
+
+       EINVAL name consists of just "/", followed by no other characters.
+
+       EMFILE The per-process limit on the number of open file descriptors has been reached.
+
+       ENAMETOOLONG name was too long.
+
+       ENFILE The system-wide limit on the total number of open files has been
+              reached.
+               ENOENT The O_CREAT flag was not specified in  oflag  and  no  semaphore
+              with  this  name  exists;  or,  O_CREAT  was specified, but name
+              wasnt well formed.
+
+       ENOMEM Insufficient memory. недостаточно памяти
+
+sem_close - close a named semaphore
+ERRORS EINVAL sem is not a valid semaphore.
+
+/dev/shm - создаются семафоры
