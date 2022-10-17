@@ -5,7 +5,7 @@ import lombok.Getter;
 import java.util.ArrayList;
 
 @Getter
-public class OtmPlaces {
+public class OTMPlaces {
     private ArrayList<OtmFeature> features;
 
     @Getter

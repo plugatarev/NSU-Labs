@@ -1,4 +1,4 @@
-package modelApi;
+package modelAPI;
 
 import lombok.Data;
 
@@ -20,7 +20,6 @@ public class APIKeys {
             geoCodingAPIKey = properties.getProperty("GraphHopper");
             openWeatherAPIKey = properties.getProperty("OpenWeatherMap");
             openTripMapAPIKey = properties.getProperty("OpenTripMap");
-
         } catch (IOException e) {
             JOptionPane.showMessageDialog(null, "ERROR: File with api keys wasn't found!");
         }

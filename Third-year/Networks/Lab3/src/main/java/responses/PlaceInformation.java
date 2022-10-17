@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Getter;
 
 @Getter
-@JsonIgnoreProperties(ignoreUnknown = false)
-public class OtmPlaceInfo {
+//@JsonIgnoreProperties(ignoreUnknown = false)
+public class OTMPlaceInfo {
     private String xid;
     private String name;
     private Address address;
