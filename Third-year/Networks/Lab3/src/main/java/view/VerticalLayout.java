@@ -1,4 +1,4 @@
-package layout;
+package view;
 
 import java.awt.*;
 
@@ -7,7 +7,7 @@ public class VerticalLayout implements LayoutManager {
     private static final int DISTANCE_BETWEEN_COMPONENTS = 5;
 
     // Следующие два метода не используются
-    public void addLayoutComponent   (String name, Component comp) {}
+    public void addLayoutComponent(String name, Component comp) {}
     public void removeLayoutComponent(Component comp) {}
 
     // Метод определения минимального размера для контейнера
