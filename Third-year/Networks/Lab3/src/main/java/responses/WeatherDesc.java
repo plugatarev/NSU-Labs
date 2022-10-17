@@ -1,34 +1,24 @@
 package responses;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 
+import java.util.ArrayList;
+
 @Getter
-public class Weather {
+public class WeatherDesc {
     @JsonAlias("main")
     private Main mainInformation;
 
     @JsonAlias("weather")
-    private Description description;
+    private ArrayList<Weather> weather;
 
     @JsonAlias("wind")
     private Wind wind;
 
-    @Getter
-    public static class Main {
-        private double temp;
-        private double feels_like;
-        private double humidity;
-    }
+    public record Main(double temp, double feels_like, double humidity) {}
 
-    @Getter
-    public static class Wind {
-        private double speed;
-    }
-    @Getter
-    public static class Description {
-        private String main;
-        private String description;
-    }
+    public record Wind(double speed) {}
+
+    public record Weather(String main, String description) {}
 }

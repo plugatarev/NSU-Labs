@@ -1,25 +1,10 @@
-package utils;
+package responses;
 
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
 import java.util.ArrayList;
 
-@Getter
-public class OTMPlaces {
-    private ArrayList<OtmFeature> features;
-
-    @Getter
-    public static class OtmFeature {
-        private String type;
-        private String id;
-        private OtmProperties properties;
-    }
-    @Getter
-    public static class OtmProperties {
-        private String xid;
-        private String name;
-        private double dist;
-        private int rate;
-        private String kinds;
-    }
+public record Places(@JsonAlias("features") ArrayList<Feature> features) {
+    public record Feature(@JsonAlias("properties") Properties properties) {}
+    public record Properties(String xid, String name, String kinds) {}
 }

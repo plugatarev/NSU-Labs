@@ -1,10 +1,7 @@
-package utils;
+package responses;
 
-public record Address(String osm_id, String osm_type,
-                      String country, String osm_key,
-                      String city, String osm_value,
-                      String postcode, String name,
-                      Point point) {
+public record Address(String country, String city, String postcode, String name, Point point) {
+    public record Point(double lat, double lng) {}
 
     @Override
     public String toString() {

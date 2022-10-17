@@ -1,41 +1,38 @@
-package utils;
+package responses;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonAlias;
 
-@Getter
-//@JsonIgnoreProperties(ignoreUnknown = false)
-public class OTMPlaceInfo {
-    private String xid;
-    private String name;
-    private Address address;
-    private OtmInfo info;
+public record PlaceInformation(String xid, String name, Address address, @JsonAlias("wikipedia_extracts") Information info) {
 
-    public static class OtmInfo {
-        @Getter
-        String description;
-    }
+    public record Information(String text) {}
 
     @Override
     public String toString() {
         String desc = name + "\n" + address.toString() + "\n";
+
         if (info != null) {
-            desc += formattedDescr(info.getDescription());
-        } else {
+            desc += formattedDescription(info.text());
+        }
+        else {
             desc += "No description was found for this place\n";
         }
+
         return desc;
     }
-    private String formattedDescr(String descr) {
-        if (descr == null) {
+
+    private String formattedDescription(String description) {
+        if (description == null) {
             return "No description was found for this place\n";
         }
         StringBuilder stringBuilder = new StringBuilder();
-        for(int i = 0; i < descr.length(); i++) {
-            stringBuilder.append(descr.charAt(i));
-            if (descr.charAt(i) == '.') {
-                stringBuilder.append('\n');
+        int length = description.length();
+        int count = 0;
+        for (int i = 0; i < length; i++) {
+            if (count++ == 100) {
+                count = 0;
+                stringBuilder.append("\n");
             }
+            stringBuilder.append(description.charAt(i));
         }
         return stringBuilder.toString();
     }
