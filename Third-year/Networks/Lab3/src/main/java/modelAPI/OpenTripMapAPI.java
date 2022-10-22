@@ -18,13 +18,13 @@ public class OpenTripMapAPI {
         );
         URI uri = URI.create(uriString);
         return UtilsAPI.GETRequest(uri, Places.class,
-                "ERROR: Status code of Open Trip map (places) response isn't 200");
+                "ERROR: Status code of Open Trip map (places) response is ");
     }
 
     public static CompletableFuture<PlaceInformation> getInfoAboutPlace(String xid, String APIKey) {
         String uriString = String.format("https://api.opentripmap.com/0.1/ru/places/xid/%s?apikey=%s", xid, APIKey);
         URI uri = URI.create(uriString);
         return UtilsAPI.GETRequest(uri, PlaceInformation.class,
-                "ERROR: Status code of Open Trip map (info) response isn't 200!");
+                "ERROR: Status code of Open Trip map (info) response is ");
     }
 }

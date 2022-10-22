@@ -14,9 +14,8 @@ public record PlaceInformation(String xid, String name, Address address, @JsonAl
             desc += formattedDescription(info.text());
         }
         else {
-            desc += "No description was found for this place\n";
+            desc += "No description was found for this place\n\n";
         }
-
         return desc;
     }
 
@@ -34,6 +33,6 @@ public record PlaceInformation(String xid, String name, Address address, @JsonAl
             }
             stringBuilder.append(description.charAt(i));
         }
-        return stringBuilder.toString();
+        return stringBuilder.append("\n").toString();
     }
 }

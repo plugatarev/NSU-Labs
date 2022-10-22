@@ -17,11 +17,12 @@ public class UtilsAPI {
     public static <T> CompletableFuture<T> GETRequest(URI uri, Class<T> tClass, String errorMessage) {
         HttpRequest request = HttpRequest.newBuilder().GET().uri(uri).build();
         return HttpClient.newHttpClient().sendAsync(request, HttpResponse.BodyHandlers.ofString()).thenApply(response -> {
-             if (response.statusCode() != OK) {
-                 JOptionPane.showMessageDialog(null, errorMessage);
+            int responseStatus = response.statusCode();
+            if (responseStatus != OK) {
+                 JOptionPane.showMessageDialog(null, errorMessage + responseStatus);
              }
              return response;
-        }).thenApply(HttpResponse::body).thenApply(s -> parseResponseToObject(s, tClass));
+        }).thenApplyAsync(HttpResponse::body).thenApplyAsync(s -> parseResponseToObject(s, tClass));
     }
 
     private static <T> T parseResponseToObject(String response, Class<T> tClass) {

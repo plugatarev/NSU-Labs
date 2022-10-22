@@ -11,6 +11,6 @@ public class GraphHopperAPI {
         String uriString = String.format("https://graphhopper.com/api/1/geocode?q=%s&locale=ru&key=%s", name, APIKey);
         URI uri = URI.create(uriString);
         return UtilsAPI.GETRequest(uri, GeoCoding.class,
-                "ERROR: Status code of geocode response isn't 200!");
+                "ERROR: Status code of geocode response is ");
     }
 }
