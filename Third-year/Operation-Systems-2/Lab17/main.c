@@ -25,6 +25,16 @@ typedef struct Context {
     node_t* head_list;
 } context_t;
 
+int len(node_t* head) {
+    node_t* tmp = head ;
+    int i = 0 ;
+    while(tmp != NULL) {
+        i++;
+        tmp = tmp->next;
+    }
+    return i ;
+}
+
 node_t* add_node(node_t* head, char* string) {
     node_t* new_node = (node_t*)malloc(sizeof(node_t));
     if (new_node == NULL) {
@@ -36,7 +46,7 @@ node_t* add_node(node_t* head, char* string) {
         perror("calloc");
         return ERROR_PTR;
     }
-    strncpy(new_node->str, string, MAX_STRING_SIZE);
+    strcpy(new_node->str, string);
     new_node->next = head;
     return new_node;
 }
@@ -44,42 +54,38 @@ node_t* add_node(node_t* head, char* string) {
 void print_list(node_t* head) {
     node_t* cur = head;
     while (cur != NULL){
-        printf("%s", cur->str);
+        printf("%s\n", cur->str);
         cur = cur->next;
     }
 }
 
-void* sort(node_t* head) {
-    if (head == NULL) return SUCCESS_PTR;
-
-    node_t* left = head;
-    node_t* right = head->next;
-    node_t* tmp = (node_t*)malloc(sizeof(node_t));
-    if (tmp == NULL) {
-        perror("malloc");
-        return ERROR_PTR;
-    }
-    tmp->str = (char*)calloc(MAX_STRING_SIZE + 1, sizeof(char));
-    if (tmp->str == NULL) {
-        perror("malloc");
-        return ERROR_PTR;
-    }
-    while (left->next != NULL) {
-        while (right != NULL) {
-            if (strncmp(left->str, right->str, MAX_STRING_SIZE) > 0){
-                strncpy(tmp->str, left->str, MAX_STRING_SIZE);
-                strncpy(left->str, right->str, MAX_STRING_SIZE);
-                strncpy(right->str, tmp->str, MAX_STRING_SIZE);
-            }
-            right = right->next;
-        }
-        left = left->next;
-        right = left->next;
-    }
-    free(tmp->str);
-    free(tmp);
-    return SUCCESS_PTR;
+node_t* swap(node_t* ptr1, node_t* ptr2) {
+    node_t* tmp = ptr2->next;
+    ptr2->next = ptr1;
+    ptr1->next = tmp;
+    return ptr2;
 }
+
+void sort(node_t** head) {
+    int length = len(*head);
+    node_t** temp;
+    node_t* p1;
+    node_t* p2;
+  
+    for (int i = 0; i <= length; i++) {
+        temp = head;  
+        for (int j = 0; j < length - i - 1; j++) {
+            p1 = *temp;
+            p2 = p1->next;
+            if (strcmp(p1->str, p2->str) > 0) {
+                *temp = swap(p1, p2);
+            }
+            temp = &(*temp)->next;
+        }
+    }
+    return;
+}
+
 
 int lock_mutex(pthread_mutex_t* mutex) {
     if (mutex == NULL) {
@@ -119,8 +125,7 @@ void* sort_list(void* param) {
         int error_code = lock_mutex(context->mutex);
         if (error_code == ERROR) return ERROR_PTR;
 
-        void* res = sort(context->head_list);
-        if (res == ERROR_PTR) ERROR_PTR;
+        sort(&context->head_list);
 
         error_code = unlock_mutex(context->mutex);
         if (error_code == ERROR) return ERROR_PTR;
@@ -132,6 +137,16 @@ int equal(char* s1, char* s2) {
     return FALSE;
 }
 
+void list_free(node_t* head_list) {
+    node_t* tmp;
+    while (head_list != NULL) {
+        tmp = head_list;
+        head_list = head_list->next;
+        free(tmp->str);
+        free(tmp);
+    }
+}
+
 int main() {
     pthread_mutex_t mutex;
     int error_code = pthread_mutex_init(&mutex, NULL);
@@ -141,19 +156,22 @@ int main() {
     }
     context_t context = {&mutex, NULL};
     pthread_t thread;
-    error_code = pthread_create(&thread, NULL, sort_list, (void *) &context);
+    error_code = pthread_create(&thread, NULL, sort_list, (void*)&context);
     if (error_code != SUCCESS) {
         perror("pthread_create");
         return SUCCESS;
     }
     char string[MAX_STRING_SIZE + 1] = {0};
     while (TRUE) {
-        char* result = fgets(string, MAX_STRING_SIZE, stdin);
+        char* result = fgets(string, MAX_STRING_SIZE + 1, stdin);
         if (result == NULL) {
             if (feof(stdin)) break;
             perror("fgets");
             return ERROR;
         }
+        int len = strlen(string);
+        if (len != 1 && len != MAX_STRING_SIZE) string[len - 1] = '\0';
+        
         error_code = lock_mutex(&mutex);
         if (error_code == ERROR) return ERROR;
         if (equal("\n", string)) {
@@ -167,5 +185,6 @@ int main() {
         error_code = unlock_mutex(&mutex);
         if (error_code == ERROR) return ERROR;
     }
+    list_free(context.head_list);
     return SUCCESS;
 }
