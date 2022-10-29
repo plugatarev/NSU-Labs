@@ -12,3 +12,14 @@ The maximum allowable value for a semaphore would be exceeded.
 sem_wait
 The call was interrupted by a signal handler; see signal(7). 
 sem is not a valid semaphore. 
+
+Зачем вообще флаг shared для семаформа?
+sem_post
+struct new_sem *isem
+isem->private = (pshared == PTHREAD_PROCESS_PRIVATE
+		   ? FUTEX_PRIVATE : FUTEX_SHARED);
+внутри sem_post будятся потоки, передавая параметр private, чтобы знать какие семафоры будить 
+кто-то окрывает семафор из разделяемых данных
+
+
+что-нибудь про именованные семафоры
