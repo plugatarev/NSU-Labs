@@ -26,7 +26,7 @@ void* child_print(void* param) {
     }
     Semaphores* sems = (Semaphores*)param;
 
-    for (int i = 0; i < LINES_COUNT; i++){
+    for (int i = 0; i < LINES_COUNT; i++) {
         int error_code = sem_wait(sems->semaphore_1);
         if (error_code != SUCCESS) {
             perror("sem_wait");
