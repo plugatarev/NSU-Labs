@@ -33,13 +33,7 @@ node_t* add_node(char* string) {
         perror("malloc");
         return ERROR_PTR;
     }
-    size_t len = strlen(string);
-    new_node->str = (char*)calloc(len, sizeof(char));
-    if (new_node == NULL) {
-        perror("calloc");
-        return ERROR_PTR;
-    }
-    strncpy(new_node->str, string, len);
+    new_node->str = string;
     new_node->next = head_list;
     return new_node;
 }
@@ -68,6 +62,7 @@ void list_free() {
     while (head_list != NULL) {
         tmp = head_list;
         head_list = head_list->next;
+        free(tmp->str);
         free(tmp);
     }
 }
@@ -191,7 +186,6 @@ int main() {
         error_code = pthread_join(threads[i], NULL);
         if (error_code != SUCCESS) {
             printf("pthread_join");
-            free_lines(lines, number_lines);
             list_free();
             return error_code;
         }
@@ -199,7 +193,6 @@ int main() {
     error_code = pthread_mutex_destroy(&mutex);
     if (error_code != SUCCESS) {
         perror("pthread_mutex_destroy");
-        free_lines(lines, number_lines);
         list_free();
         return ERROR;
     }
@@ -208,6 +201,5 @@ int main() {
     head_list = reverse_list();
     print_list();
     list_free();
-    free_lines(lines, number_lines);
     return SUCCESS;
 }
