@@ -1,18 +1,20 @@
-package com.github.plugatarev.networkproxy.handlers;
+package com.github.plugatarev.networkproxy.socksHandlers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 
-import com.github.plugatarev.networkproxy.models.Connection;
-import com.github.plugatarev.networkproxy.models.DnsService;
-import com.github.plugatarev.networkproxy.socks.SocksParser;
-import com.github.plugatarev.networkproxy.socks.SocksRequest;
-import com.github.plugatarev.networkproxy.socks.SocksResponse;
+import com.github.plugatarev.networkproxy.handlers.ConnectHandler;
+import com.github.plugatarev.networkproxy.handlers.Handler;
+import com.github.plugatarev.networkproxy.network.Connection;
+import com.github.plugatarev.networkproxy.network.DNS;
+import com.github.plugatarev.networkproxy.messages.SocksParser;
+import com.github.plugatarev.networkproxy.messages.SocksRequest;
+import com.github.plugatarev.networkproxy.messages.SocksResponse;
 
 public final class SocksRequestHandler extends SocksHandler {
     private static final byte DOMAIN_NAME_TYPE = 0x03;
-    private static final int NO_ERROR = 0;
+    private static final int RSV = 0x00;
 
     public SocksRequestHandler(Connection connection) {
         super(connection);
@@ -25,25 +27,25 @@ public final class SocksRequestHandler extends SocksHandler {
         read(selectionKey);
         SocksRequest request = SocksParser.parseRequest(outputBuffer);
 
-        if (null == request) return;
+        if (request == null) return;
 
-        byte parseError = request.getParseError();
+        byte rsv = request.getRsv();
 
-        if (NO_ERROR != parseError) {
-            onError(selectionKey, parseError);
+        if (rsv != RSV) {
+            error(selectionKey, rsv);
             return;
         }
 
-        if (DOMAIN_NAME_TYPE == request.getAddressType()) {
-            DnsService dnsService = DnsService.getInstance();
-            dnsService.resolveName(request, selectionKey);
+        if (request.getAddressType() == DOMAIN_NAME_TYPE) {
+            DNS dns = DNS.create();
+            dns.resolveName(request, selectionKey);
             return;
         }
 
-        ConnectHandler.connectToTarget(selectionKey, request.getAddress());
+        ConnectHandler.connectHost(selectionKey, request.getAddress());
     }
 
-    public static void onError(SelectionKey selectionKey, byte error) {
+    public static void error(SelectionKey selectionKey, byte error) {
         Handler handler = (Handler) selectionKey.attachment();
         Connection connection = handler.getConnection();
         putErrorResponseIntoBuf(selectionKey, connection, error);

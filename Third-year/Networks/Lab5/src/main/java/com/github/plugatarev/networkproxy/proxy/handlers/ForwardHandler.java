@@ -1,9 +1,9 @@
-package com.github.plugatarev.networkproxy.handlers;
+package com.github.plugatarev.networkproxy.proxy;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 
-import com.github.plugatarev.networkproxy.models.Connection;
+import com.github.plugatarev.networkproxy.network.Connection;
 
 public final class ForwardHandler extends Handler {
     public ForwardHandler(Connection connection) {

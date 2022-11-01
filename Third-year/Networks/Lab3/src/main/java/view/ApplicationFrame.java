@@ -7,6 +7,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public class ApplicationFrame {
     private static final int FRAME_WIDTH = 800;
@@ -35,7 +36,6 @@ public class ApplicationFrame {
         frame.setLayout(new VerticalLayout());
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         addressesList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
         setSizes();
         addComponents();
         addActionListeners();
@@ -109,9 +109,20 @@ public class ApplicationFrame {
         infoAboutPlaceButton.addActionListener(l -> {
             double lat = geoPoints.get(addressesList.getSelectedIndex()).lat();
             double lng = geoPoints.get(addressesList.getSelectedIndex()).lng();
-            InformationAPI.Information info = InformationAPI.getInformation(lat, lng);
-            updateWeatherInfo(info.getWeather());
-            showInfoAboutInterestingPlace(info.getInformation());
+
+            CompletableFuture<List<CompletableFuture<PlaceInformation>>> list =
+                    OpenTripMapAPI.getInterestingPlaces(lat, lng, keys.getOpenTripMapAPIKey())
+                                  .thenApply(response ->
+                                    response.features()
+                                            .stream()
+                                            .map(k -> k.properties().xid())
+                                            .map(xid -> OpenTripMapAPI.getInfoAboutPlace(xid, keys.getOpenTripMapAPIKey()))
+                                            .toList());
+            CompletableFuture<WeatherDesc> weatherByCords = OpenWeatherMapAPI.getWeatherByCords(lat, lng, keys.getOpenWeatherAPIKey());
+
+            CompletableFuture.allOf(weatherByCords, list).join();
+            updateWeatherInfo(weatherByCords.join());
+            showInfoAboutInterestingPlace(list.join().stream().map(CompletableFuture::join).toList());
         });
     }
 }

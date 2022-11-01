@@ -1,23 +1,26 @@
-package com.github.plugatarev.networkproxy.socks;
+package com.github.plugatarev.networkproxy.messages;
+
+import com.github.plugatarev.networkproxy.socks.message.SocksConnectRequest;
+import com.github.plugatarev.networkproxy.socks.message.SocksRequest;
 
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public final class SocksParser {
-    private static final byte WRONG_ADDRESS_TYPE = 0x08;
-    private static final byte WRONG_COMMAND = 0x07;
+    private static final byte ADDRESS_TYPE_NOT_SUPPORTED = 0x08;
+    private static final byte COMMAND_NOT_SUPPORTED = 0x07;
     private static final int IPV4 = 0x01;
     private static final int DOMAIN_NAME = 0x03;
     private static final int CONNECT_COMMAND = 0x01;
 
-    public static SocksConnectRequest parseConnect(ByteBuffer byteBuffer) {
+    public static SocksConnectRequest parseConnectRequest(ByteBuffer byteBuffer) {
         try {
             byteBuffer.flip();
             SocksConnectRequest connect = new SocksConnectRequest();
             connect.setVersion(byteBuffer.get());
             connect.setNumOfMethods(byteBuffer.get());
-            byteBuffer.get(connect.getMethods());
+            byteBuffer.get(connect.getAuthenticationMethods());
             return connect;
         }
         catch (BufferUnderflowException exception) {
@@ -33,13 +36,13 @@ public final class SocksParser {
             request.setVersion(byteBuffer.get());
             byte command = byteBuffer.get();
 
-            if (CONNECT_COMMAND != command) {
-                request.setParseError(WRONG_COMMAND);
+            if (command != CONNECT_COMMAND) {
+                request.setRsv(COMMAND_NOT_SUPPORTED);
             }
 
             request.setCommandCode(command);
             byteBuffer.get();
-            checkAddressType(byteBuffer.get(), byteBuffer, request);
+            setAddressType(byteBuffer.get(), byteBuffer, request);
             request.setDestinationPort(byteBuffer.getShort());
             return request;
         }
@@ -55,12 +58,12 @@ public final class SocksParser {
         byteBuffer.position(newStartPos);
     }
 
-    private static void checkAddressType(byte addressType, ByteBuffer byteBuffer, SocksRequest request) {
+    private static void setAddressType(byte addressType, ByteBuffer byteBuffer, SocksRequest request) {
         request.setAddressType(addressType);
         switch (addressType) {
             case IPV4 -> byteBuffer.get(request.getIp4Address());
             case DOMAIN_NAME -> request.setDomainName(getDomainName(byteBuffer));
-            default -> request.setParseError(WRONG_ADDRESS_TYPE);
+            default -> request.setRsv(ADDRESS_TYPE_NOT_SUPPORTED);
         }
     }
 

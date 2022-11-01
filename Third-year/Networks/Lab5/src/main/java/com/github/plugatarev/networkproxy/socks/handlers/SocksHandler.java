@@ -1,9 +1,10 @@
-package com.github.plugatarev.networkproxy.handlers;
+package com.github.plugatarev.networkproxy.socksHandlers;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 
-import com.github.plugatarev.networkproxy.models.Connection;
+import com.github.plugatarev.networkproxy.handlers.Handler;
+import com.github.plugatarev.networkproxy.network.Connection;
 
 public abstract class SocksHandler extends Handler {
     public SocksHandler(Connection connection) {

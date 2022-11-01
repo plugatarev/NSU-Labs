@@ -1,4 +1,4 @@
-package com.github.plugatarev.networkproxy.socks;
+package com.github.plugatarev.networkproxy.messages;
 
 import lombok.Setter;
 

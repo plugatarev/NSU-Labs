@@ -1,19 +1,19 @@
-package com.github.plugatarev.networkproxy.handlers;
+package com.github.plugatarev.networkproxy.proxy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-import com.github.plugatarev.networkproxy.models.Connection;
+import com.github.plugatarev.networkproxy.network.Connection;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.apache.log4j.Logger;
 
 @RequiredArgsConstructor
 public abstract class Handler {
+    private final static int EMPTY = 0;
     private static final Logger logger = Logger.getLogger(Handler.class);
-
     private static final int BUF_SIZE = 65536;
 
     @Getter private final Connection connection;
@@ -27,8 +27,7 @@ public abstract class Handler {
     public int read(SelectionKey selectionKey) throws IOException {
         Handler handler = (Handler) selectionKey.attachment();
         SocketChannel socket = (SocketChannel) selectionKey.channel();
-        Connection connection = handler.getConnection();
-        ByteBuffer outputBuffer = connection.getOutputBuffer().getByteBuffer();
+        ByteBuffer outputBuffer = handler.getConnection().getOutputBuffer().getByteBuffer();
 
         if (!isReadyToRead(outputBuffer, connection)) {
             return 0;
@@ -38,7 +37,7 @@ public abstract class Handler {
 
         if (readCount <= 0) {
             connection.shutdown();
-            selectionKey.interestOps(0);
+            selectionKey.interestOps(EMPTY);
             checkConnectionClose(socket);
         }
 
@@ -46,18 +45,18 @@ public abstract class Handler {
     }
 
     public int write(SelectionKey selectionKey) throws IOException {
-        ByteBuffer inputBuffer = this.connection.getInputBuffer().getByteBuffer();
+        ByteBuffer inputBuffer = connection.getInputBuffer().getByteBuffer();
         SocketChannel socketChannel = (SocketChannel) selectionKey.channel();
-        this.connection.prepareToWrite();
+        connection.prepareToWrite();
         socketChannel.write(inputBuffer);
         int remaining = inputBuffer.remaining();
 
-        if (remaining == 0) {
+        if (remaining == EMPTY) {
             selectionKey.interestOps(SelectionKey.OP_READ);
             checkChannel(socketChannel, inputBuffer);
         }
         else {
-            this.connection.setWriteStartPosition();
+            connection.shiftWriteStartPosition();
         }
         return remaining;
     }
@@ -67,20 +66,20 @@ public abstract class Handler {
     }
 
     private void checkConnectionClose(SocketChannel socketChannel) throws IOException {
-        if (this.connection.isReadyToClose()) {
+        if (connection.isReadyToClose()) {
             logger.debug("Socket closed: " + socketChannel.getRemoteAddress());
             socketChannel.close();
-            this.connection.closeChannel();
+            connection.closeChannel();
         }
     }
 
     private void checkChannel(SocketChannel socketChannel, ByteBuffer buffer) throws IOException {
-        if (this.connection.isChannelShutDown()) {
+        if (connection.isChannelShutDown()) {
             socketChannel.shutdownOutput();
             return;
         }
 
         buffer.clear();
-        this.connection.resetWriteStartPosition();
+        connection.resetWriteStartPosition();
     }
 }

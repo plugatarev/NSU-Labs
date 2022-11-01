@@ -1,4 +1,4 @@
-package com.github.plugatarev.networkproxy.socks;
+package com.github.plugatarev.networkproxy.messages;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,10 +10,10 @@ import java.net.UnknownHostException;
 public final class SocksRequest {
     @Getter @Setter private byte version;
     @Getter @Setter private byte commandCode;
-    @Getter @Setter private String domainName;
-    @Getter @Setter private byte parseError = 0x00;
-    @Getter private final byte[] ip4Address = new byte[4];
+    @Getter @Setter private byte rsv = 0x00;
     @Getter @Setter private byte addressType;
+    @Getter @Setter private String domainName;
+    @Getter private final byte[] ip4Address = new byte[4];
     @Getter @Setter private short destinationPort;
 
     public InetSocketAddress getAddress() throws UnknownHostException {

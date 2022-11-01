@@ -1,13 +1,13 @@
-package com.github.plugatarev.networkproxy.handlers;
+package com.github.plugatarev.networkproxy.socksHandlers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 
-import com.github.plugatarev.networkproxy.models.Connection;
-import com.github.plugatarev.networkproxy.socks.SocksConnectRequest;
-import com.github.plugatarev.networkproxy.socks.SocksConnectResponse;
-import com.github.plugatarev.networkproxy.socks.SocksParser;
+import com.github.plugatarev.networkproxy.network.Connection;
+import com.github.plugatarev.networkproxy.messages.SocksConnectRequest;
+import com.github.plugatarev.networkproxy.messages.SocksConnectResponse;
+import com.github.plugatarev.networkproxy.messages.SocksParser;
 
 public final class SocksConnectHandler extends SocksHandler {
     private static final byte NO_AUTHENTICATION = 0x00;
@@ -23,14 +23,14 @@ public final class SocksConnectHandler extends SocksHandler {
         Connection connection = getConnection();
         ByteBuffer outputBuffer = connection.getOutputBuffer().getByteBuffer();
         read(selectionKey);
-        SocksConnectRequest connectRequest = SocksParser.parseConnect(outputBuffer);
+        SocksConnectRequest connectRequest = SocksParser.parseConnectRequest(outputBuffer);
 
         if (connectRequest == null) return;
 
         SocksConnectResponse connectResponse = new SocksConnectResponse();
 
         if (!checkRequest(connectRequest)) {
-            connectResponse.setMethod(NO_COMPARABLE_METHOD);
+            connectResponse.setChosenAuthenticationMethod(NO_COMPARABLE_METHOD);
         }
 
         ByteBuffer inputBuffer = connection.getInputBuffer().getByteBuffer();
@@ -41,12 +41,12 @@ public final class SocksConnectHandler extends SocksHandler {
     }
 
     private boolean checkRequest(SocksConnectRequest connectRequest) {
-        return (SOCKS_VERSION == connectRequest.getVersion()) && checkMethods(connectRequest.getMethods());
+        return (connectRequest.getVersion() == SOCKS_VERSION) && checkMethods(connectRequest.getAuthenticationMethods());
     }
 
     private static boolean checkMethods(byte[] methods) {
         for (byte method : methods) {
-            if (NO_AUTHENTICATION == method) {
+            if (method == NO_AUTHENTICATION) {
                 return true;
             }
         }

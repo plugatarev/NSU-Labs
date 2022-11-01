@@ -1,7 +1,7 @@
-package com.github.plugatarev.networkproxy.handlers;
+package com.github.plugatarev.networkproxy.proxy;
 
-import com.github.plugatarev.networkproxy.models.Connection;
-import com.github.plugatarev.networkproxy.socks.SocksResponse;
+import com.github.plugatarev.networkproxy.network.Connection;
+import com.github.plugatarev.networkproxy.socks.message.SocksResponse;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -28,31 +28,31 @@ public final class ConnectHandler extends Handler {
         selectionKey.interestOpsOr(SelectionKey.OP_READ);
     }
 
-    public static SocketChannel initTargetSocket(Connection clientConnection, SelectionKey selectionKey, InetSocketAddress targetAddress) throws IOException {
-        SocketChannel targetSocket = SocketChannel.open();
-        targetSocket.bind(new InetSocketAddress(ANY_PORT));
-        targetSocket.configureBlocking(false);
-        Connection targetConnection = new Connection(clientConnection.getOutputBuffer(), clientConnection.getInputBuffer());
-        targetSocket.connect(targetAddress);
-        ConnectHandler connectHandler = new ConnectHandler(targetConnection);
-        clientConnection.setChannel(targetSocket);
-        targetConnection.setChannel((SocketChannel) selectionKey.channel());
-        SelectionKey key = targetSocket.register(selectionKey.selector(), SelectionKey.OP_CONNECT, connectHandler);
-        targetConnection.registerBufferListener(() -> key.interestOpsOr(SelectionKey.OP_WRITE));
-        return targetSocket;
-    }
-
-    public static void connectToTarget(SelectionKey clientKey, InetSocketAddress targetAddress) throws IOException {
+    public static void connectHost(SelectionKey clientKey, InetSocketAddress targetAddress) throws IOException {
         Handler handler = (Handler) clientKey.attachment();
         Connection clientConnection = handler.getConnection();
-        SocketChannel targetSocketChannel = initTargetSocket(clientConnection, clientKey, targetAddress);
-        putResponseIntoBuf(clientConnection, targetSocketChannel);
+        SocketChannel targetSocketChannel = initHostSocket(clientConnection, clientKey, targetAddress);
+        putResponseIntoBuffer(clientConnection, targetSocketChannel);
         clientKey.interestOpsOr(SelectionKey.OP_WRITE);
         clientKey.attach(new ForwardHandler(clientConnection));
         clientConnection.getOutputBuffer().getByteBuffer().clear();
     }
 
-    private static void putResponseIntoBuf(Connection connection, SocketChannel socketChannel) throws IOException {
+    private static SocketChannel initHostSocket(Connection clientConnection, SelectionKey selectionKey, InetSocketAddress hostAddress) throws IOException {
+        SocketChannel hostSocket = SocketChannel.open();
+        hostSocket.bind(new InetSocketAddress(ANY_PORT));
+        hostSocket.configureBlocking(false);
+        Connection hostConnection = new Connection(clientConnection.getOutputBuffer(), clientConnection.getInputBuffer());
+        hostSocket.connect(hostAddress);
+        ConnectHandler connectHandler = new ConnectHandler(hostConnection);
+        clientConnection.setChannel(hostSocket);
+        hostConnection.setChannel((SocketChannel) selectionKey.channel());
+        SelectionKey key = hostSocket.register(selectionKey.selector(), SelectionKey.OP_CONNECT, connectHandler);
+        hostConnection.registerListener(() -> key.interestOpsOr(SelectionKey.OP_WRITE));
+        return hostSocket;
+    }
+
+    private static void putResponseIntoBuffer(Connection connection, SocketChannel socketChannel) throws IOException {
         InetSocketAddress socketAddress = (InetSocketAddress) socketChannel.getLocalAddress();
         SocksResponse response = new SocksResponse();
         byte[] address = InetAddress.getLocalHost().getAddress();

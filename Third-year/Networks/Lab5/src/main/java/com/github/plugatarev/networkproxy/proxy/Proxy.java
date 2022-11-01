@@ -1,18 +1,16 @@
 package com.github.plugatarev.networkproxy;
 
-import com.github.plugatarev.networkproxy.handlers.AcceptHandler;
-import com.github.plugatarev.networkproxy.handlers.Handler;
-import com.github.plugatarev.networkproxy.models.Connection;
-import com.github.plugatarev.networkproxy.models.DnsService;
+import com.github.plugatarev.networkproxy.proxy.AcceptHandler;
+import com.github.plugatarev.networkproxy.proxy.Handler;
+import com.github.plugatarev.networkproxy.network.Connection;
+import com.github.plugatarev.networkproxy.network.DNS;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -32,12 +30,8 @@ public final class Proxy {
             serverSocketChannel.configureBlocking(false);
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(serverSocketChannel));
 
-            DatagramChannel dnsChannel = DatagramChannel.open();
-            dnsChannel.configureBlocking(false);
-
-            DnsService dnsService = DnsService.getInstance();
-            dnsService.setDatagramChannel(dnsChannel);
-            dnsService.registerSelector(selector);
+            DNS dns = DNS.create();
+            dns.registerSelector(selector);
 
             run(selector);
         }
@@ -47,23 +41,21 @@ public final class Proxy {
     }
 
     private void run(Selector selector) throws IOException {
-        while (!Thread.interrupted()) {
+        while (true) {
             selector.select();
             Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
             while (iterator.hasNext()) {
                 SelectionKey readyKey = iterator.next();
+                iterator.remove();
                 try {
-                    iterator.remove();
                     if (readyKey.isValid()) {
                         handleSelectionKey(readyKey);
                     }
                 }
                 catch (IOException exception) {
+                    exception.printStackTrace();
                     logger.error(exception);
                     closeConnection(readyKey);
-                }
-                catch (CancelledKeyException ignored) {
-
                 }
             }
         }
@@ -74,7 +66,7 @@ public final class Proxy {
         if (selectionKey.isWritable()) {
             handler.write(selectionKey);
         }
-        if (selectionKey.isValid() && selectionKey.readyOps() != SelectionKey.OP_WRITE) {
+        else {
             handler.handle(selectionKey);
         }
     }
