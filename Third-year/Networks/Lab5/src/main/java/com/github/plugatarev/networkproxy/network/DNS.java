@@ -1,9 +1,9 @@
 package com.github.plugatarev.networkproxy.network;
 
-import com.github.plugatarev.networkproxy.handlers.ConnectHandler;
-import com.github.plugatarev.networkproxy.handlers.Handler;
-import com.github.plugatarev.networkproxy.handlers.SocksRequestHandler;
-import com.github.plugatarev.networkproxy.socks.SocksRequest;
+import com.github.plugatarev.networkproxy.proxy.handlers.ConnectHandler;
+import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
+import com.github.plugatarev.networkproxy.socks.handlers.SocksRequestHandler;
+import com.github.plugatarev.networkproxy.socks.message.SocksRequest;
 import org.apache.log4j.Logger;
 import org.xbill.DNS.Record;
 import org.xbill.DNS.*;
@@ -19,63 +19,61 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class DnsService {
-    private static final Logger logger = Logger.getLogger(DnsService.class);
+public final class DNS {
+    private static final Logger logger = Logger.getLogger(DNS.class);
 
     private static final byte HOST_UNREACHABLE_ERROR = 0x04;
     private static final int DNS_SERVER_PORT = 53;
     private static final int BUFFER_SIZE = 1024;
     private static final int CACHE_SIZE = 256;
 
-    private static DnsService INSTANCE;
+    private static DNS INSTANCE;
 
-    private final Map<Integer, DnsMapValue> unresolvedNames = new HashMap<>();
+    private final Map<Integer, Information> unresolvedNames = new HashMap<>();
     private final Cache resolvedNamesCache = new Cache(CACHE_SIZE);
     private final InetSocketAddress dnsServerAddress;
 
     private Handler dnsResponseHandler;
-    private DatagramChannel datagramChannel;
+    private final DatagramChannel datagramChannel;
     private int messageID = 0;
 
-    public static DnsService create() {
+    public static DNS create() throws IOException {
         if (INSTANCE == null) {
-            INSTANCE = new DnsService();
+            INSTANCE = new DNS();
         }
         return INSTANCE;
     }
 
-    private DnsService() {
+    private DNS() throws IOException {
+        DatagramChannel dnsChannel = DatagramChannel.open();
+        dnsChannel.configureBlocking(false);
+        initResponseHandler();
+        this.datagramChannel = dnsChannel;
         this.dnsServerAddress = new InetSocketAddress(ResolverConfig.getCurrentConfig().server().getAddress(), DNS_SERVER_PORT);
     }
 
-    public void setDatagramChannel(DatagramChannel channel) {
-        this.datagramChannel = channel;
-        initResponseHandler();
-    }
-
-    public void registerSelector(Selector selector) throws ClosedChannelException {
+    public void register(Selector selector) throws ClosedChannelException {
         this.datagramChannel.register(selector, SelectionKey.OP_READ, dnsResponseHandler);
     }
 
     public void resolveName(SocksRequest request, SelectionKey selectionKey) throws IOException {
         try {
             String name = request.getDomainName();
-            String cachedAddress = resolvedNamesCache.get(name + ".");
+            String ip = resolvedNamesCache.get(name + ".");
 
-            if (null != cachedAddress) {
-                connectToTarget(cachedAddress, selectionKey, request.getDestinationPort());
+            if (ip != null) {
+                connectToHost(ip, request.getDestinationPort(), selectionKey);
                 return;
             }
 
-            logger.debug("New domain name to resolve: " + request.getDomainName());
-            DnsMapValue mapValue = new DnsMapValue(selectionKey, request.getDestinationPort());
+            logger.info("New domain name to resolve: " + request.getDomainName());
             Message query = getQuery(name);
-            byte[] queryBytes = query.toWire();
-            unresolvedNames.put(query.getHeader().getID(), mapValue);
-            datagramChannel.send(ByteBuffer.wrap(queryBytes), dnsServerAddress);
+            Information info = new Information(selectionKey, request.getDestinationPort());
+            unresolvedNames.put(query.getHeader().getID(), info);
+            datagramChannel.send(ByteBuffer.wrap(query.toWire()), dnsServerAddress);
         }
         catch (TextParseException exception) {
-            SocksRequestHandler.onError(selectionKey, HOST_UNREACHABLE_ERROR);
+            SocksRequestHandler.error(selectionKey, HOST_UNREACHABLE_ERROR);
             logger.error(exception);
         }
     }
@@ -93,10 +91,10 @@ public final class DnsService {
                 Message response = new Message(byteBuffer.flip().array());
                 List<Record> answers = response.getSection(Section.ANSWER);
                 int responseID = response.getHeader().getID();
-                DnsMapValue unresolvedName = unresolvedNames.get(response.getHeader().getID());
+                Information unresolvedName = unresolvedNames.get(response.getHeader().getID());
 
                 if (answers.size() == 0) {
-                    SocksRequestHandler.onError(unresolvedName.selectionKey(), HOST_UNREACHABLE_ERROR);
+                    SocksRequestHandler.error(unresolvedName.selectionKey(), HOST_UNREACHABLE_ERROR);
                     return;
                 }
 
@@ -104,15 +102,15 @@ public final class DnsService {
                 logger.debug(hostname + " resolved");
                 String address = answers.get(0).rdataToString();
                 resolvedNamesCache.put(hostname, address);
-                connectToTarget(address, unresolvedName.selectionKey(), unresolvedName.targetPort());
+                connectToHost(address, unresolvedName.port(), unresolvedName.selectionKey());
                 unresolvedNames.remove(responseID);
             }
         };
     }
 
-    private void connectToTarget(String address, SelectionKey selectionKey, int port) throws IOException {
+    private void connectToHost(String address, int port, SelectionKey selectionKey) throws IOException {
         InetSocketAddress socketAddress = new InetSocketAddress(address, port);
-        ConnectHandler.connectToTarget(selectionKey, socketAddress);
+        ConnectHandler.connectHost(selectionKey, socketAddress);
     }
 
     private Message getQuery(String domainName) throws TextParseException {
@@ -129,7 +127,7 @@ public final class DnsService {
         return message;
     }
 
-    private record DnsMapValue(SelectionKey selectionKey,short targetPort) {
+    private record Information(SelectionKey selectionKey, short port) {
     }
 
     private static final class Cache {

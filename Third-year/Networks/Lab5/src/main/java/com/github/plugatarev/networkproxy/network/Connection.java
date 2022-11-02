@@ -13,55 +13,53 @@ import java.nio.channels.SocketChannel;
 public final class Connection {
     private static final Logger logger = Logger.getLogger(Connection.class);
 
-    @Getter private final ObservableByteBuffer inputBuffer;
-    @Getter private final ObservableByteBuffer outputBuffer;
+    @Getter private final ByteBufferWrapper inputBuffer;
+    @Getter private final ByteBufferWrapper outputBuffer;
 
     @Setter private SocketChannel channel;
     private int writeStartPosition = 0;
 
     public Connection(int bufSize) {
-        this.inputBuffer = new ObservableByteBuffer(ByteBuffer.allocate(bufSize));
-        this.outputBuffer = new ObservableByteBuffer(ByteBuffer.allocate(bufSize));
+        this.inputBuffer = new ByteBufferWrapper(ByteBuffer.allocate(bufSize));
+        this.outputBuffer = new ByteBufferWrapper(ByteBuffer.allocate(bufSize));
     }
 
-    public void registerBufferListener(ObservableByteBuffer.BufferListener bufferListener) {
-        this.inputBuffer.setBufferListener(bufferListener);
+    public void registerListener(ByteBufferWrapper.Listener listener) {
+        inputBuffer.setListener(listener);
     }
 
     public void notifyBufferListener() {
-        this.outputBuffer.notifyListener();
+        outputBuffer.notifyListener();
     }
 
     public void closeChannel() throws IOException {
-        if (null != this.channel) {
-            logger.debug("Socket closed: " + this.channel.getRemoteAddress());
-            this.channel.close();
+        if (channel != null) {
+            logger.debug("Socket closed: " + channel.getRemoteAddress());
+            channel.close();
         }
     }
 
     public void shutdown() {
-        this.outputBuffer.shutdown();
+        outputBuffer.setShutdown(true);
     }
 
     public boolean isChannelShutDown() {
-        return this.inputBuffer.isReadyToClose();
+        return inputBuffer.isReadyClose();
     }
 
     public void prepareToWrite() {
-        ByteBuffer inputBuffer = getInputBuffer().getByteBuffer();
-        inputBuffer.flip();
-        inputBuffer.position(this.writeStartPosition);
+        getInputBuffer().getByteBuffer().flip().position(writeStartPosition);
     }
 
     public boolean isReadyToClose() {
-        return this.inputBuffer.isReadyToClose() && this.outputBuffer.isReadyToClose();
+        return inputBuffer.isReadyClose() && outputBuffer.isReadyClose();
     }
 
     public void resetWriteStartPosition() {
-        this.writeStartPosition = 0;
+        writeStartPosition = 0;
     }
 
-    public void setWriteStartPosition() {
+    public void shiftWriteStartPosition() {
         ByteBuffer inputBuffer = getInputBuffer().getByteBuffer();
         this.writeStartPosition = inputBuffer.position();
         int newStartPosition = inputBuffer.limit();
@@ -70,26 +68,22 @@ public final class Connection {
     }
 
     @RequiredArgsConstructor
-    public static final class ObservableByteBuffer {
+    public static final class ByteBufferWrapper {
         @Getter private final ByteBuffer byteBuffer;
 
-        @Setter private BufferListener bufferListener;
-        private boolean shouldShutdown = false;
+        @Setter private Listener listener;
+        @Setter private boolean shutdown = false;
 
         public void notifyListener(){
-            this.bufferListener.onUpdate();
+            listener.update();
         }
 
-        public void shutdown() {
-            this.shouldShutdown = true;
+        public boolean isReadyClose(){
+            return shutdown && (byteBuffer.remaining() == 0);
         }
 
-        public boolean isReadyToClose(){
-            return (this.byteBuffer.remaining() == 0) && this.shouldShutdown;
-        }
-
-        public interface BufferListener {
-            void onUpdate();
+        public interface Listener {
+            void update();
         }
     }
 }
