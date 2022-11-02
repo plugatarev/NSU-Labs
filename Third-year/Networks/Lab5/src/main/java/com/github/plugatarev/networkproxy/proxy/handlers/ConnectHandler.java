@@ -1,4 +1,4 @@
-package com.github.plugatarev.networkproxy.proxy;
+package com.github.plugatarev.networkproxy.proxy.handlers;
 
 import com.github.plugatarev.networkproxy.network.Connection;
 import com.github.plugatarev.networkproxy.socks.message.SocksResponse;
@@ -28,11 +28,11 @@ public final class ConnectHandler extends Handler {
         selectionKey.interestOpsOr(SelectionKey.OP_READ);
     }
 
-    public static void connectHost(SelectionKey clientKey, InetSocketAddress targetAddress) throws IOException {
+    public static void connectHost(SelectionKey clientKey, InetSocketAddress hostAddress) throws IOException {
         Handler handler = (Handler) clientKey.attachment();
         Connection clientConnection = handler.getConnection();
-        SocketChannel targetSocketChannel = initHostSocket(clientConnection, clientKey, targetAddress);
-        putResponseIntoBuffer(clientConnection, targetSocketChannel);
+        SocketChannel hostSocketChannel = initHostSocket(clientConnection, clientKey, hostAddress);
+        putResponseIntoBuffer(clientConnection, hostSocketChannel);
         clientKey.interestOpsOr(SelectionKey.OP_WRITE);
         clientKey.attach(new ForwardHandler(clientConnection));
         clientConnection.getOutputBuffer().getByteBuffer().clear();

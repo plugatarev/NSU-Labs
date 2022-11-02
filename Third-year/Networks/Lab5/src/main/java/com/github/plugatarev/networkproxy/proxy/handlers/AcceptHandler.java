@@ -1,4 +1,4 @@
-package com.github.plugatarev.networkproxy.proxy;
+package com.github.plugatarev.networkproxy.proxy.handlers;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;

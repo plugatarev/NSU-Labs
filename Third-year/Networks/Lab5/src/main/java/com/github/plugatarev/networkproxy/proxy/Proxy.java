@@ -1,9 +1,9 @@
-package com.github.plugatarev.networkproxy;
+package com.github.plugatarev.networkproxy.proxy;
 
-import com.github.plugatarev.networkproxy.proxy.AcceptHandler;
-import com.github.plugatarev.networkproxy.proxy.Handler;
 import com.github.plugatarev.networkproxy.network.Connection;
 import com.github.plugatarev.networkproxy.network.DNS;
+import com.github.plugatarev.networkproxy.proxy.handlers.AcceptHandler;
+import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
 import lombok.RequiredArgsConstructor;
 
 import org.apache.log4j.Logger;
@@ -31,7 +31,7 @@ public final class Proxy {
             serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT, new AcceptHandler(serverSocketChannel));
 
             DNS dns = DNS.create();
-            dns.registerSelector(selector);
+            dns.register(selector);
 
             run(selector);
         }
@@ -53,7 +53,7 @@ public final class Proxy {
                     }
                 }
                 catch (IOException exception) {
-                    exception.printStackTrace();
+//                    exception.printStackTrace();
                     logger.error(exception);
                     closeConnection(readyKey);
                 }
