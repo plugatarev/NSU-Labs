@@ -1,16 +1,16 @@
-package com.github.plugatarev.networkproxy.socksHandlers;
+package com.github.plugatarev.networkproxy.socks.handlers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 
-import com.github.plugatarev.networkproxy.handlers.ConnectHandler;
-import com.github.plugatarev.networkproxy.handlers.Handler;
+import com.github.plugatarev.networkproxy.proxy.handlers.ConnectHandler;
+import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
 import com.github.plugatarev.networkproxy.network.Connection;
 import com.github.plugatarev.networkproxy.network.DNS;
-import com.github.plugatarev.networkproxy.messages.SocksParser;
-import com.github.plugatarev.networkproxy.messages.SocksRequest;
-import com.github.plugatarev.networkproxy.messages.SocksResponse;
+import com.github.plugatarev.networkproxy.socks.SocksParser;
+import com.github.plugatarev.networkproxy.socks.message.SocksRequest;
+import com.github.plugatarev.networkproxy.socks.message.SocksResponse;
 
 public final class SocksRequestHandler extends SocksHandler {
     private static final byte DOMAIN_NAME_TYPE = 0x03;

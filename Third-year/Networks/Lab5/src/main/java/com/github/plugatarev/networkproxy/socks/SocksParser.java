@@ -1,4 +1,4 @@
-package com.github.plugatarev.networkproxy.messages;
+package com.github.plugatarev.networkproxy.socks;
 
 import com.github.plugatarev.networkproxy.socks.message.SocksConnectRequest;
 import com.github.plugatarev.networkproxy.socks.message.SocksRequest;

@@ -1,13 +1,13 @@
-package com.github.plugatarev.networkproxy.socksHandlers;
+package com.github.plugatarev.networkproxy.socks.handlers;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 
 import com.github.plugatarev.networkproxy.network.Connection;
-import com.github.plugatarev.networkproxy.messages.SocksConnectRequest;
-import com.github.plugatarev.networkproxy.messages.SocksConnectResponse;
-import com.github.plugatarev.networkproxy.messages.SocksParser;
+import com.github.plugatarev.networkproxy.socks.message.SocksConnectResponse;
+import com.github.plugatarev.networkproxy.socks.SocksParser;
+import com.github.plugatarev.networkproxy.socks.message.SocksConnectRequest;
 
 public final class SocksConnectHandler extends SocksHandler {
     private static final byte NO_AUTHENTICATION = 0x00;
