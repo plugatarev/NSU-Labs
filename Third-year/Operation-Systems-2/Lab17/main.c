@@ -67,25 +67,34 @@ node_t* swap(node_t* ptr1, node_t* ptr2) {
 }
 
 void sort(node_t** head) {
-    int length = len(*head);
-    node_t** temp;
-    node_t* p1;
-    node_t* p2;
-  
-    for (int i = 0; i <= length; i++) {
-        temp = head;  
-        for (int j = 0; j < length - i - 1; j++) {
-            p1 = *temp;
-            p2 = p1->next;
-            if (strcmp(p1->str, p2->str) > 0) {
-                *temp = swap(p1, p2);
+    if (*head == NULL) return;
+    node_t* left;
+    node_t* prev = NULL;
+    node_t* tmp;
+    int is_sort;
+    do {
+        left = *head;
+        is_sort = FALSE;
+        prev = NULL;
+        while (left->next != NULL) {
+            int is_swap = FALSE;
+            if (strncmp(left->str, left->next->str, MAX_STRING_SIZE) > 0) {
+                is_swap = TRUE;
+                is_sort = TRUE;
+                if (prev == NULL) {
+                    *head = swap(left, left->next);
+                    tmp = *head;
+                }
+                else {
+                    prev->next = swap(left, left->next);
+                    tmp = prev->next;
+                }
             }
-            temp = &(*temp)->next;
+            prev = is_swap ? tmp : left;
+            left = prev->next;
         }
-    }
-    return;
+    } while (is_sort);
 }
-
 
 int lock_mutex(pthread_mutex_t* mutex) {
     if (mutex == NULL) {
@@ -137,7 +146,7 @@ int equal(char* s1, char* s2) {
     return FALSE;
 }
 
-void list_free(node_t* head_list) {
+void free_list(node_t* head_list) {
     node_t* tmp;
     while (head_list != NULL) {
         tmp = head_list;
@@ -185,6 +194,6 @@ int main() {
         error_code = unlock_mutex(&mutex);
         if (error_code == ERROR) return ERROR;
     }
-    list_free(context.head_list);
+    free_list(context.head_list);
     return SUCCESS;
 }
