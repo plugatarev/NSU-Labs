@@ -7,7 +7,6 @@
 #define ERROR (void*)1
 
 #define VALUE_ZERO 0
-#define MAX_COUNT_WIDGET 15
 #define TRUE 1
 #define SLEEP_A 1
 #define SLEEP_B 2
