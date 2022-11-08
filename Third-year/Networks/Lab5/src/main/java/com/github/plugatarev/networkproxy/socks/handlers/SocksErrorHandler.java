@@ -8,6 +8,7 @@ import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
 import com.github.plugatarev.networkproxy.network.Connection;
 
 public final class SocksErrorHandler extends Handler {
+    private static final int EMPTY = 0;
     public SocksErrorHandler(Connection connection) {
         super(connection);
     }
@@ -19,7 +20,7 @@ public final class SocksErrorHandler extends Handler {
     @Override
     public int write(SelectionKey selectionKey) throws IOException {
         int remaining = super.write(selectionKey);
-        if (remaining == 0) {
+        if (remaining == EMPTY) {
             SocketChannel socket = (SocketChannel) selectionKey.channel();
             socket.close();
         }

@@ -8,6 +8,7 @@ public final class SocksResponse {
     private static final int RESPONSE_LENGTH = 10;
     private static final byte VERSION = 0x05;
     private static final byte ADDRESS_TYPE = 0x01;
+    private static final byte RSV = 0x00;
     @Setter private byte replyCode = 0x00;
     @Setter private byte[] boundIp4Address;
     @Setter private short boundPort;
@@ -17,7 +18,7 @@ public final class SocksResponse {
         byteBuffer
                 .put(VERSION)
                 .put(replyCode)
-                .put((byte) 0x00)
+                .put(RSV)
                 .put(ADDRESS_TYPE)
                 .put(boundIp4Address)
                 .putShort(boundPort);
@@ -30,7 +31,7 @@ public final class SocksResponse {
         byteBuffer
                 .put(VERSION)
                 .put(replyCode)
-                .put((byte) 0x00);
+                .put(RSV);
         byteBuffer.flip();
         return byteBuffer;
     }

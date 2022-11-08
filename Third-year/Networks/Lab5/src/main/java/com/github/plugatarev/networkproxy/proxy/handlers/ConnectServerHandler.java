@@ -10,10 +10,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 
-public final class ConnectHandler extends Handler {
+public final class ConnectServerHandler extends Handler {
     private static final int ANY_PORT = 0;
 
-    public ConnectHandler(Connection connection) {
+    public ConnectServerHandler(Connection connection) {
         super(connection);
     }
 
@@ -23,33 +23,33 @@ public final class ConnectHandler extends Handler {
         Handler handler = (Handler) selectionKey.attachment();
         Connection connection = handler.getConnection();
         socketChannel.finishConnect();
-        selectionKey.attach(new ForwardHandler(connection));
+        selectionKey.attach(new CommunicationHandler(connection));
         selectionKey.interestOpsAnd(~SelectionKey.OP_CONNECT);
         selectionKey.interestOpsOr(SelectionKey.OP_READ);
     }
 
-    public static void connectHost(SelectionKey clientKey, InetSocketAddress hostAddress) throws IOException {
+    public static void connectToServer(SelectionKey clientKey, InetSocketAddress hostAddress) throws IOException {
         Handler handler = (Handler) clientKey.attachment();
         Connection clientConnection = handler.getConnection();
-        SocketChannel hostSocketChannel = initHostSocket(clientConnection, clientKey, hostAddress);
+        SocketChannel hostSocketChannel = initServerSocket(clientConnection, clientKey, hostAddress);
         putResponseIntoBuffer(clientConnection, hostSocketChannel);
         clientKey.interestOpsOr(SelectionKey.OP_WRITE);
-        clientKey.attach(new ForwardHandler(clientConnection));
+        clientKey.attach(new CommunicationHandler(clientConnection));
         clientConnection.getOutputBuffer().getByteBuffer().clear();
     }
 
-    private static SocketChannel initHostSocket(Connection clientConnection, SelectionKey selectionKey, InetSocketAddress hostAddress) throws IOException {
-        SocketChannel hostSocket = SocketChannel.open();
-        hostSocket.bind(new InetSocketAddress(ANY_PORT));
-        hostSocket.configureBlocking(false);
-        Connection hostConnection = new Connection(clientConnection.getOutputBuffer(), clientConnection.getInputBuffer());
-        hostSocket.connect(hostAddress);
-        ConnectHandler connectHandler = new ConnectHandler(hostConnection);
-        clientConnection.setChannel(hostSocket);
-        hostConnection.setChannel((SocketChannel) selectionKey.channel());
-        SelectionKey key = hostSocket.register(selectionKey.selector(), SelectionKey.OP_CONNECT, connectHandler);
-        hostConnection.registerListener(() -> key.interestOpsOr(SelectionKey.OP_WRITE));
-        return hostSocket;
+    private static SocketChannel initServerSocket(Connection clientConnection, SelectionKey selectionKey, InetSocketAddress serverAddress) throws IOException {
+        SocketChannel serverSocket = SocketChannel.open();
+        serverSocket.bind(new InetSocketAddress(ANY_PORT));
+        serverSocket.configureBlocking(false);
+        Connection serverConnection = new Connection(clientConnection.getOutputBuffer(), clientConnection.getInputBuffer());
+        serverSocket.connect(serverAddress);
+        ConnectServerHandler connectHandler = new ConnectServerHandler(serverConnection);
+        clientConnection.setChannel(serverSocket);
+        serverConnection.setChannel((SocketChannel) selectionKey.channel());
+        SelectionKey key = serverSocket.register(selectionKey.selector(), SelectionKey.OP_CONNECT, connectHandler);
+        serverConnection.registerChanger(() -> key.interestOpsOr(SelectionKey.OP_WRITE));
+        return serverSocket;
     }
 
     private static void putResponseIntoBuffer(Connection connection, SocketChannel socketChannel) throws IOException {

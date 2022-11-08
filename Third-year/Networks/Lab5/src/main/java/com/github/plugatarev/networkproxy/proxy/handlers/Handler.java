@@ -29,16 +29,14 @@ public abstract class Handler {
         SocketChannel socket = (SocketChannel) selectionKey.channel();
         ByteBuffer outputBuffer = handler.getConnection().getOutputBuffer().getByteBuffer();
 
-        if (!isReadyToRead(outputBuffer, connection)) {
-            return 0;
-        }
+//        if (!isReadyToRead(outputBuffer, connection)) return 0;
 
         int readCount = socket.read(outputBuffer);
-
         if (readCount <= 0) {
             connection.shutdown();
             selectionKey.interestOps(EMPTY);
-            checkConnectionClose(socket);
+            closeConnection(socket);
+            return 0;
         }
 
         return readCount;
@@ -62,10 +60,10 @@ public abstract class Handler {
     }
 
     private boolean isReadyToRead(ByteBuffer buffer, Connection connection) {
-        return (buffer.position() < BUF_SIZE / 2) || connection.isChannelShutDown();
+        return (buffer.position() < BUF_SIZE / 2) || connection.isShutdown();
     }
 
-    private void checkConnectionClose(SocketChannel socketChannel) throws IOException {
+    private void closeConnection(SocketChannel socketChannel) throws IOException {
         if (connection.isReadyToClose()) {
             logger.debug("Socket closed: " + socketChannel.getRemoteAddress());
             socketChannel.close();
@@ -74,7 +72,7 @@ public abstract class Handler {
     }
 
     private void checkChannel(SocketChannel socketChannel, ByteBuffer buffer) throws IOException {
-        if (connection.isChannelShutDown()) {
+        if (connection.isShutdown()) {
             socketChannel.shutdownOutput();
             return;
         }

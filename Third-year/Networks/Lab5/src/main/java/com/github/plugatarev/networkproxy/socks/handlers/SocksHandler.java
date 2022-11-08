@@ -15,7 +15,7 @@ public abstract class SocksHandler extends Handler {
     public int read(SelectionKey selectionKey) throws IOException {
         int readCount = super.read(selectionKey);
         if (readCount < 0) {
-            throw new IOException("Socket closed during SOCKS5 handshake");
+            throw new IOException("Socket closed: SOCKS5 handshake");
         }
         return readCount;
     }

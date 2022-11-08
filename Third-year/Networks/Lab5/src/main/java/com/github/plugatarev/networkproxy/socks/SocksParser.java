@@ -17,11 +17,11 @@ public final class SocksParser {
     public static SocksConnectRequest parseConnectRequest(ByteBuffer byteBuffer) {
         try {
             byteBuffer.flip();
-            SocksConnectRequest connect = new SocksConnectRequest();
-            connect.setVersion(byteBuffer.get());
-            connect.setNumOfMethods(byteBuffer.get());
-            byteBuffer.get(connect.getAuthenticationMethods());
-            return connect;
+            SocksConnectRequest socksRequest = new SocksConnectRequest();
+            socksRequest.setVersion(byteBuffer.get());
+            socksRequest.setNumOfMethods(byteBuffer.get());
+            byteBuffer.get(socksRequest.getAuthenticationMethods());
+            return socksRequest;
         }
         catch (BufferUnderflowException exception) {
             prepareBufferToWrite(byteBuffer);

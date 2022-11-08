@@ -24,12 +24,12 @@ public final class Connection {
         this.outputBuffer = new ByteBufferWrapper(ByteBuffer.allocate(bufSize));
     }
 
-    public void registerListener(ByteBufferWrapper.Listener listener) {
-        inputBuffer.setListener(listener);
+    public void registerChanger(ByteBufferWrapper.StateChanger changer) {
+        inputBuffer.setChanger(changer);
     }
 
-    public void notifyBufferListener() {
-        outputBuffer.notifyListener();
+    public void changeState() {
+        outputBuffer.changeState();
     }
 
     public void closeChannel() throws IOException {
@@ -40,10 +40,10 @@ public final class Connection {
     }
 
     public void shutdown() {
-        outputBuffer.setShutdown(true);
+        outputBuffer.setClose(true);
     }
 
-    public boolean isChannelShutDown() {
+    public boolean isShutdown() {
         return inputBuffer.isReadyClose();
     }
 
@@ -71,19 +71,19 @@ public final class Connection {
     public static final class ByteBufferWrapper {
         @Getter private final ByteBuffer byteBuffer;
 
-        @Setter private Listener listener;
-        @Setter private boolean shutdown = false;
+        @Setter private StateChanger changer;
+        @Setter private boolean isClose = false;
 
-        public void notifyListener(){
-            listener.update();
+        public void changeState(){
+            changer.change();
         }
 
         public boolean isReadyClose(){
-            return shutdown && (byteBuffer.remaining() == 0);
+            return isClose && (byteBuffer.remaining() == 0);
         }
 
-        public interface Listener {
-            void update();
+        public interface StateChanger {
+            void change();
         }
     }
 }

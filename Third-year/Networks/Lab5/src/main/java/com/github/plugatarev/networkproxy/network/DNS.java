@@ -1,6 +1,6 @@
 package com.github.plugatarev.networkproxy.network;
 
-import com.github.plugatarev.networkproxy.proxy.handlers.ConnectHandler;
+import com.github.plugatarev.networkproxy.proxy.handlers.ConnectServerHandler;
 import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
 import com.github.plugatarev.networkproxy.socks.handlers.SocksRequestHandler;
 import com.github.plugatarev.networkproxy.socks.message.SocksRequest;
@@ -22,6 +22,8 @@ import java.util.Map;
 public final class DNS {
     private static final Logger logger = Logger.getLogger(DNS.class);
 
+    private static final int QUERY = 0;
+    private static final String DOMAIN_NAME_END = ".";
     private static final byte HOST_UNREACHABLE_ERROR = 0x04;
     private static final int DNS_SERVER_PORT = 53;
     private static final int BUFFER_SIZE = 1024;
@@ -59,7 +61,7 @@ public final class DNS {
     public void resolveName(SocksRequest request, SelectionKey selectionKey) throws IOException {
         try {
             String name = request.getDomainName();
-            String ip = resolvedNamesCache.get(name + ".");
+            String ip = resolvedNamesCache.get(name + DOMAIN_NAME_END);
 
             if (ip != null) {
                 connectToHost(ip, request.getDestinationPort(), selectionKey);
@@ -83,14 +85,12 @@ public final class DNS {
             @Override
             public void handle(SelectionKey selectionKey) throws IOException {
                 ByteBuffer byteBuffer = ByteBuffer.allocate(BUFFER_SIZE);
-
                 if (datagramChannel.receive(byteBuffer) == null) {
                     return;
                 }
 
                 Message response = new Message(byteBuffer.flip().array());
                 List<Record> answers = response.getSection(Section.ANSWER);
-                int responseID = response.getHeader().getID();
                 Information unresolvedName = unresolvedNames.get(response.getHeader().getID());
 
                 if (answers.size() == 0) {
@@ -103,6 +103,7 @@ public final class DNS {
                 String address = answers.get(0).rdataToString();
                 resolvedNamesCache.put(hostname, address);
                 connectToHost(address, unresolvedName.port(), unresolvedName.selectionKey());
+                int responseID = response.getHeader().getID();
                 unresolvedNames.remove(responseID);
             }
         };
@@ -110,18 +111,18 @@ public final class DNS {
 
     private void connectToHost(String address, int port, SelectionKey selectionKey) throws IOException {
         InetSocketAddress socketAddress = new InetSocketAddress(address, port);
-        ConnectHandler.connectHost(selectionKey, socketAddress);
+        ConnectServerHandler.connectToServer(selectionKey, socketAddress);
     }
 
     private Message getQuery(String domainName) throws TextParseException {
         Header header = new Header(messageID++);
         header.setFlag(Flags.RD);
-        header.setOpcode(0);
+        header.setOpcode(QUERY);
 
         Message message = new Message();
         message.setHeader(header);
 
-        Record record = Record.newRecord(new Name(domainName + "."), Type.A, DClass.IN);
+        Record record = Record.newRecord(new Name(domainName + DOMAIN_NAME_END), Type.A, DClass.IN);
         message.addRecord(record, Section.QUESTION);
 
         return message;

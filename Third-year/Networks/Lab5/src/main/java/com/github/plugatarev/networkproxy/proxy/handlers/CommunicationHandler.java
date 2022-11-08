@@ -5,8 +5,8 @@ import java.nio.channels.SelectionKey;
 
 import com.github.plugatarev.networkproxy.network.Connection;
 
-public final class ForwardHandler extends Handler {
-    public ForwardHandler(Connection connection) {
+public final class CommunicationHandler extends Handler {
+    public CommunicationHandler(Connection connection) {
         super(connection);
     }
 
@@ -15,7 +15,7 @@ public final class ForwardHandler extends Handler {
         Connection connection = ((Handler) selectionKey.attachment()).getConnection();
         int readCount = read(selectionKey);
         if (readCount != 0) {
-            connection.notifyBufferListener();
+            connection.changeState();
         }
     }
 }

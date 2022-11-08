@@ -9,12 +9,12 @@ import com.github.plugatarev.networkproxy.network.Connection;
 import com.github.plugatarev.networkproxy.socks.handlers.SocksConnectHandler;
 import org.apache.log4j.Logger;
 
-public final class AcceptHandler extends Handler {
-    private static final Logger logger = Logger.getLogger(AcceptHandler.class);
+public final class AcceptClientHandler extends Handler {
+    private static final Logger logger = Logger.getLogger(AcceptClientHandler.class);
 
     private final ServerSocketChannel serverSocketChannel;
 
-    public AcceptHandler(ServerSocketChannel serverSocketChannel) {
+    public AcceptClientHandler(ServerSocketChannel serverSocketChannel) {
         super(null);
         this.serverSocketChannel = serverSocketChannel;
     }
@@ -26,7 +26,7 @@ public final class AcceptHandler extends Handler {
         Connection connection = new Connection(getBufSize());
         SocksConnectHandler connectHandler = new SocksConnectHandler(connection);
         SelectionKey key = socketChannel.register(selectionKey.selector(), SelectionKey.OP_READ, connectHandler);
-        connection.registerListener(() -> key.interestOpsOr(SelectionKey.OP_WRITE));
+        connection.registerChanger(() -> key.interestOpsOr(SelectionKey.OP_WRITE));
         logger.debug("New connection: " + socketChannel.getRemoteAddress());
     }
 }

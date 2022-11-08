@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 
-import com.github.plugatarev.networkproxy.proxy.handlers.ConnectHandler;
+import com.github.plugatarev.networkproxy.proxy.handlers.ConnectServerHandler;
 import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
 import com.github.plugatarev.networkproxy.network.Connection;
 import com.github.plugatarev.networkproxy.network.DNS;
@@ -41,8 +41,7 @@ public final class SocksRequestHandler extends SocksHandler {
             dns.resolveName(request, selectionKey);
             return;
         }
-
-        ConnectHandler.connectHost(selectionKey, request.getAddress());
+        ConnectServerHandler.connectToServer(selectionKey, request.getAddress());
     }
 
     public static void error(SelectionKey selectionKey, byte error) {
@@ -52,7 +51,7 @@ public final class SocksRequestHandler extends SocksHandler {
         selectionKey.attach(new SocksErrorHandler(connection));
     }
 
-    public static void putErrorResponseIntoBuf(SelectionKey selectionKey, Connection connection, byte error) {
+    private static void putErrorResponseIntoBuf(SelectionKey selectionKey, Connection connection, byte error) {
         SocksResponse response = new SocksResponse();
         response.setReplyCode(error);
         ByteBuffer inputBuff = connection.getInputBuffer().getByteBuffer();

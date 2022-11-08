@@ -21,8 +21,8 @@ public final class SocksConnectHandler extends SocksHandler {
     @Override
     public void handle(SelectionKey selectionKey) throws IOException {
         Connection connection = getConnection();
-        ByteBuffer outputBuffer = connection.getOutputBuffer().getByteBuffer();
         read(selectionKey);
+        ByteBuffer outputBuffer = connection.getOutputBuffer().getByteBuffer();
         SocksConnectRequest connectRequest = SocksParser.parseConnectRequest(outputBuffer);
 
         if (connectRequest == null) return;

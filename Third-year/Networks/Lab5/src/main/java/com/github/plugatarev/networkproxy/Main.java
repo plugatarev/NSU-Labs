@@ -5,12 +5,12 @@ import org.apache.log4j.Logger;
 
 public final class Main {
     private static final Logger logger = Logger.getLogger(Main.class);
-
+    private static final int COMMAND_LINE_ARGUMENT_COUNT = 1;
     private static final int MIN_PORT = 1025;
     private static final int MAX_PORT = 65535;
 
     public static void main(String[] args) {
-        if (args.length != 1) {
+        if (args.length != COMMAND_LINE_ARGUMENT_COUNT) {
             logger.error("Usage: port");
             return;
         }
