@@ -24,7 +24,7 @@ public final class Connection {
         this.outputBuffer = new ByteBufferWrapper(ByteBuffer.allocate(bufSize));
     }
 
-    public void registerChanger(ByteBufferWrapper.StateChanger changer) {
+    public void registerChanger(Runnable changer) {
         inputBuffer.setChanger(changer);
     }
 
@@ -61,29 +61,21 @@ public final class Connection {
 
     public void shiftWriteStartPosition() {
         ByteBuffer inputBuffer = getInputBuffer().getByteBuffer();
-        this.writeStartPosition = inputBuffer.position();
-        int newStartPosition = inputBuffer.limit();
-        inputBuffer.clear();
-        inputBuffer.position(newStartPosition);
+        inputBuffer.compact();
     }
 
     @RequiredArgsConstructor
     public static final class ByteBufferWrapper {
         @Getter private final ByteBuffer byteBuffer;
-
-        @Setter private StateChanger changer;
+        @Setter private Runnable changer;
         @Setter private boolean isClose = false;
 
         public void changeState(){
-            changer.change();
+            changer.run();
         }
 
         public boolean isReadyClose(){
             return isClose && (byteBuffer.remaining() == 0);
-        }
-
-        public interface StateChanger {
-            void change();
         }
     }
 }

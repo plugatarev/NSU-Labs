@@ -64,7 +64,7 @@ public final class DNS {
             String ip = resolvedNamesCache.get(name + DOMAIN_NAME_END);
 
             if (ip != null) {
-                connectToHost(ip, request.getDestinationPort(), selectionKey);
+                connectToServer(ip, request.getDestinationPort(), selectionKey);
                 return;
             }
 
@@ -102,14 +102,14 @@ public final class DNS {
                 logger.debug(hostname + " resolved");
                 String address = answers.get(0).rdataToString();
                 resolvedNamesCache.put(hostname, address);
-                connectToHost(address, unresolvedName.port(), unresolvedName.selectionKey());
+                connectToServer(address, unresolvedName.port(), unresolvedName.selectionKey());
                 int responseID = response.getHeader().getID();
                 unresolvedNames.remove(responseID);
             }
         };
     }
 
-    private void connectToHost(String address, int port, SelectionKey selectionKey) throws IOException {
+    private void connectToServer(String address, int port, SelectionKey selectionKey) throws IOException {
         InetSocketAddress socketAddress = new InetSocketAddress(address, port);
         ConnectServerHandler.connectToServer(selectionKey, socketAddress);
     }

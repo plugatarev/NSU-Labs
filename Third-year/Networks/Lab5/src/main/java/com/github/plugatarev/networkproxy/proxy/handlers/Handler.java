@@ -12,6 +12,7 @@ import org.apache.log4j.Logger;
 
 @RequiredArgsConstructor
 public abstract class Handler {
+    private final static double LOAD_FACTOR = 0.75;
     private final static int EMPTY = 0;
     private static final Logger logger = Logger.getLogger(Handler.class);
     private static final int BUF_SIZE = 65536;
@@ -29,14 +30,17 @@ public abstract class Handler {
         SocketChannel socket = (SocketChannel) selectionKey.channel();
         ByteBuffer outputBuffer = handler.getConnection().getOutputBuffer().getByteBuffer();
 
-//        if (!isReadyToRead(outputBuffer, connection)) return 0;
-
         int readCount = socket.read(outputBuffer);
         if (readCount <= 0) {
             connection.shutdown();
             selectionKey.interestOps(EMPTY);
-            closeConnection(socket);
-            return 0;
+            if (connection.isReadyToClose()) {
+                closeConnection(socket);
+            }
+        }
+
+        if (outputBuffer.position() > BUF_SIZE * LOAD_FACTOR) {
+            selectionKey.interestOpsAnd(~SelectionKey.OP_READ);
         }
 
         return readCount;
@@ -48,6 +52,7 @@ public abstract class Handler {
         connection.prepareToWrite();
         socketChannel.write(inputBuffer);
         int remaining = inputBuffer.remaining();
+        if (inputBuffer.position() > BUF_SIZE * LOAD_FACTOR) selectionKey.interestOpsOr(SelectionKey.OP_READ);
 
         if (remaining == EMPTY) {
             selectionKey.interestOps(SelectionKey.OP_READ);
@@ -59,16 +64,10 @@ public abstract class Handler {
         return remaining;
     }
 
-    private boolean isReadyToRead(ByteBuffer buffer, Connection connection) {
-        return (buffer.position() < BUF_SIZE / 2) || connection.isShutdown();
-    }
-
     private void closeConnection(SocketChannel socketChannel) throws IOException {
-        if (connection.isReadyToClose()) {
-            logger.debug("Socket closed: " + socketChannel.getRemoteAddress());
-            socketChannel.close();
-            connection.closeChannel();
-        }
+        logger.debug("Socket closed: " + socketChannel.getRemoteAddress());
+        socketChannel.close();
+        connection.closeChannel();
     }
 
     private void checkChannel(SocketChannel socketChannel, ByteBuffer buffer) throws IOException {

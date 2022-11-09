@@ -30,22 +30,22 @@ public final class ConnectServerHandler extends Handler {
 
     public static void connectToServer(SelectionKey clientKey, InetSocketAddress hostAddress) throws IOException {
         Handler handler = (Handler) clientKey.attachment();
-        Connection clientConnection = handler.getConnection();
-        SocketChannel hostSocketChannel = initServerSocket(clientConnection, clientKey, hostAddress);
-        putResponseIntoBuffer(clientConnection, hostSocketChannel);
+        Connection connection = handler.getConnection();
+        SocketChannel serverSocket = initServerConnection(connection, clientKey, hostAddress);
+        putResponseIntoBuffer(connection, serverSocket);
         clientKey.interestOpsOr(SelectionKey.OP_WRITE);
-        clientKey.attach(new CommunicationHandler(clientConnection));
-        clientConnection.getOutputBuffer().getByteBuffer().clear();
+        clientKey.attach(new CommunicationHandler(connection));
+        connection.getOutputBuffer().getByteBuffer().clear();
     }
 
-    private static SocketChannel initServerSocket(Connection clientConnection, SelectionKey selectionKey, InetSocketAddress serverAddress) throws IOException {
+    private static SocketChannel initServerConnection(Connection connection, SelectionKey selectionKey, InetSocketAddress serverAddress) throws IOException {
         SocketChannel serverSocket = SocketChannel.open();
         serverSocket.bind(new InetSocketAddress(ANY_PORT));
         serverSocket.configureBlocking(false);
-        Connection serverConnection = new Connection(clientConnection.getOutputBuffer(), clientConnection.getInputBuffer());
+        Connection serverConnection = new Connection(connection.getOutputBuffer(), connection.getInputBuffer());
         serverSocket.connect(serverAddress);
         ConnectServerHandler connectHandler = new ConnectServerHandler(serverConnection);
-        clientConnection.setChannel(serverSocket);
+        connection.setChannel(serverSocket);
         serverConnection.setChannel((SocketChannel) selectionKey.channel());
         SelectionKey key = serverSocket.register(selectionKey.selector(), SelectionKey.OP_CONNECT, connectHandler);
         serverConnection.registerChanger(() -> key.interestOpsOr(SelectionKey.OP_WRITE));

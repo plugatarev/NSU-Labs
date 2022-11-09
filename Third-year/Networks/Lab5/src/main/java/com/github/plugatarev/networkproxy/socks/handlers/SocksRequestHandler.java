@@ -12,7 +12,7 @@ import com.github.plugatarev.networkproxy.socks.SocksParser;
 import com.github.plugatarev.networkproxy.socks.message.SocksRequest;
 import com.github.plugatarev.networkproxy.socks.message.SocksResponse;
 
-public final class SocksRequestHandler extends SocksHandler {
+public final class SocksRequestHandler extends Handler {
     private static final byte DOMAIN_NAME_TYPE = 0x03;
     private static final int RSV = 0x00;
 
@@ -26,7 +26,6 @@ public final class SocksRequestHandler extends SocksHandler {
 
         read(selectionKey);
         SocksRequest request = SocksParser.parseRequest(outputBuffer);
-
         if (request == null) return;
 
         byte rsv = request.getRsv();

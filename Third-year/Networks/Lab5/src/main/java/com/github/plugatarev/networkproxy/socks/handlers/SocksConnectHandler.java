@@ -5,11 +5,12 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 
 import com.github.plugatarev.networkproxy.network.Connection;
+import com.github.plugatarev.networkproxy.proxy.handlers.Handler;
 import com.github.plugatarev.networkproxy.socks.message.SocksConnectResponse;
 import com.github.plugatarev.networkproxy.socks.SocksParser;
 import com.github.plugatarev.networkproxy.socks.message.SocksConnectRequest;
 
-public final class SocksConnectHandler extends SocksHandler {
+public final class SocksConnectHandler extends Handler {
     private static final byte NO_AUTHENTICATION = 0x00;
     private static final int SOCKS_VERSION = 0x05;
     private static final byte NO_COMPARABLE_METHOD = (byte) 0xFF;
@@ -24,12 +25,10 @@ public final class SocksConnectHandler extends SocksHandler {
         read(selectionKey);
         ByteBuffer outputBuffer = connection.getOutputBuffer().getByteBuffer();
         SocksConnectRequest connectRequest = SocksParser.parseConnectRequest(outputBuffer);
-
         if (connectRequest == null) return;
 
         SocksConnectResponse connectResponse = new SocksConnectResponse();
-
-        if (!checkRequest(connectRequest)) {
+        if (!isCorrectRequest(connectRequest)) {
             connectResponse.setChosenAuthenticationMethod(NO_COMPARABLE_METHOD);
         }
 
@@ -40,7 +39,7 @@ public final class SocksConnectHandler extends SocksHandler {
         connection.getOutputBuffer().getByteBuffer().clear();
     }
 
-    private boolean checkRequest(SocksConnectRequest connectRequest) {
+    private boolean isCorrectRequest(SocksConnectRequest connectRequest) {
         return (connectRequest.getVersion() == SOCKS_VERSION) && checkMethods(connectRequest.getAuthenticationMethods());
     }
 
