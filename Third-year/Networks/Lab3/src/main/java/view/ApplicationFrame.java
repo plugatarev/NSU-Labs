@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class ApplicationFrame {
+
     private static final int FRAME_WIDTH = 800;
     private static final int FRAME_HEIGHT = 800;
     private static final String DEFAULT_PATH_TO_KEYS = "src/main/resources/api_keys.property";
@@ -27,8 +28,10 @@ public class ApplicationFrame {
     private final JList<String> addressesList = new JList<>(addressesListModel);
 
     private final JLabel weatherLabel = new JLabel();
-
     private final JScrollPane addressesScrollPane = new JScrollPane(addressesList);
+
+    private final List<CompletableFuture<PlaceInformation>> placeInformationResult = new ArrayList<>();
+    private CompletableFuture<WeatherDesc> weatherResult;
 
     public ApplicationFrame() {
         frame.setSize(FRAME_WIDTH, FRAME_HEIGHT);
@@ -97,12 +100,16 @@ public class ApplicationFrame {
         JOptionPane.showMessageDialog(frame, scrollPane);
     }
 
+    private void showInformation() {
+        updateWeatherInfo(weatherResult.join());
+        showInfoAboutInterestingPlace(placeInformationResult.stream().map(CompletableFuture::join).toList());
+    }
+
     private void addActionListeners() {
         findButton.addActionListener((l) -> {
             String placeName = this.placeName.getText();
             if (placeName != null) {
-                GraphHopperAPI.getAddressesByName(placeName, keys.getGeoCodingAPIKey()).
-                              thenAccept(this::updateGeoCoding);
+                GraphHopperAPI.getAddressesByName(placeName, keys.getGeoCodingAPIKey()).thenAccept(this::updateGeoCoding);
             }
         });
 
@@ -110,19 +117,18 @@ public class ApplicationFrame {
             double lat = geoPoints.get(addressesList.getSelectedIndex()).lat();
             double lng = geoPoints.get(addressesList.getSelectedIndex()).lng();
 
-            CompletableFuture<List<CompletableFuture<PlaceInformation>>> list =
-                    OpenTripMapAPI.getInterestingPlaces(lat, lng, keys.getOpenTripMapAPIKey())
-                                  .thenApply(response ->
-                                    response.features()
-                                            .stream()
-                                            .map(k -> k.properties().xid())
-                                            .map(xid -> OpenTripMapAPI.getInfoAboutPlace(xid, keys.getOpenTripMapAPIKey()))
-                                            .toList());
-            CompletableFuture<WeatherDesc> weatherByCords = OpenWeatherMapAPI.getWeatherByCords(lat, lng, keys.getOpenWeatherAPIKey());
+            weatherResult = OpenWeatherMapAPI.getWeatherByCords(lat, lng, keys.getOpenWeatherAPIKey());
 
-            CompletableFuture.allOf(weatherByCords, list).join();
-            updateWeatherInfo(weatherByCords.join());
-            showInfoAboutInterestingPlace(list.join().stream().map(CompletableFuture::join).toList());
+            OpenTripMapAPI.getInterestingPlaces(lat, lng, keys.getOpenTripMapAPIKey())
+                          .thenAccept(response -> {
+                                  for (Places.Feature f : response.features()) {
+                                      placeInformationResult.add(OpenTripMapAPI.getInfoAboutPlace(f.properties().xid(), keys.getOpenTripMapAPIKey()));
+                                  }
+                            }
+                          );
+
+            CompletableFuture<Void> cfList = CompletableFuture.allOf(placeInformationResult.toArray(new CompletableFuture[0]));
+            CompletableFuture.allOf(weatherResult, cfList).thenRun(this::showInformation);
         });
     }
 }
