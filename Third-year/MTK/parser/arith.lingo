@@ -1,6 +1,11 @@
-S = sum | mul | int ;
+S = sum | min | mul | div | int | var | neg;
 digit = '0'-'9';
 int = digit+ $s{ ArInt(s2i($s)) };
 ws = (' ' | '\t' | '\n' | '\r')*;
 sum = "(" ws S:l ws "+" ws S:r ws ")" { ArSum(:l, :r)};
+min = "(" ws S:l ws "-" ws S:r ws ")" { ArMin(:l, :r)};
 mul = "(" ws S:l ws "*" ws S:r ws ")" { ArMult(:l, :r)};
+div = "(" ws S:l ws "/" ws S:r ws ")" { ArDiv(:l, :r)};
+neg = "-" ws S:e { ArNeg(:e)};
+var = letter+ $s{ ArVar($s) };
+letter = 'a'-'z';

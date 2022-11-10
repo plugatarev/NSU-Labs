@@ -1,9 +1,567 @@
 import lingo/pegcode/driver;
+import ds/tree;
+import string;
+import sys/system;
 
-ArExpr ::= ArSum, ArMult, ArInt;
+ArExpr ::= ArSum, ArMin, ArMult, ArInt, ArDiv, ArNeg, ArVar;
     ArSum(lhs:ArExpr, rhs:ArExpr);
+    ArMin(lhs:ArExpr, rhs:ArExpr);
     ArMult(lhs:ArExpr, rhs:ArExpr);
+    ArDiv(lhs:ArExpr, rhs:ArExpr);
+    ArNeg(val:ArExpr);
+    ArVar(name:string);
     ArInt(val:int);
+
+RatNumber(numerator:int, denominator:int);
+
+Polynom(vars: Tree<Monom, int>);
+Monom(monom: Tree<string, int>);
+RationalFunction(numerator: Polynom, denominator: Polynom);
+ar2rf(expr: ArExpr) -> RationalFunction;
+rf2s(rf: RationalFunction) -> string;
+
+sumPolynoms(l: Polynom, r: Polynom) -> Polynom;
+multPolynoms(l: Polynom, r: Polynom) -> Polynom;
+multMonoms(l: Monom, r: Monom) -> Monom;
+p2s(p: Polynom) -> string;
+m2s(m: Monom) -> string;
+
+isNullRatFun(rf: RationalFunction) -> int {
+    if (rf == nullRatFun()) {
+        1;
+    }
+    else {
+        0;
+    }
+}
+
+nullRatFun() -> RationalFunction {
+    RationalFunction(Polynom(makeTree1(Monom(makeTree1(".", 0)), 0)), 
+                     Polynom(makeTree1(Monom(makeTree1(".", 0)), 0))
+                    );
+}
+
+zeroRatFun() -> RationalFunction {
+    RationalFunction(zeroPolynom(), onePolynom());
+}
+
+isZeroRatFun(rf: RationalFunction) -> int {
+    isZeroPolynom(rf.numerator);
+}
+
+Rule_(pattern: ArExpr, replacement: ArExpr);
+
+weight(e: ArExpr) -> int {
+    switch(e) {
+        ArInt(c): 1;
+        ArNeg(arg): weight(arg) + 1;
+        ArVar(_): 1;
+        ArSum(l, r): weight(l) + weight(r);
+        ArMult(l, r): weight(l) + weight(r);
+        ArDiv(l, r): weight(l) + weight(r);
+        default: 0;
+    }
+}
+
+change(expr: ArExpr, subst: Tree<string, ArExpr>) -> ArExpr {
+	switch (expr) {
+        ArInt(c): expr;
+		ArMult(l, r): ArMult(change(l, subst), change(r, subst));
+        ArSum(l, r): ArSum(change(l, subst), change(r, subst));
+		ArMin(l, r): ArMin(change(l, subst), change(r, subst));
+		ArDiv(l, r): ArDiv(change(l, subst), change(r, subst));
+		ArNeg(v): ArNeg(change(v, subst));
+		ArVar(n): lookupTreeDef(subst, n, expr);
+	}
+}
+
+str2rule(pattern:string, replacement:string) -> Rule_ {
+    Rule_(s2ar(pattern), s2ar(replacement));
+}
+
+rules = [
+    str2rule("((x - z) + (y + z))", "(x + y)"),
+    str2rule("((x + z) + (y - z))", "(x + y)"),
+    str2rule("(x + x)", "(2 * x)"),
+    str2rule("- -x", "x"),
+    str2rule("(x + y)", "(y + x)"),
+    str2rule("(x * y)", "(y * x)"),
+    str2rule("(x + 0)", "x"),
+    str2rule("(x - 0)", "x"),
+    str2rule("(x - x)", "0"),
+    str2rule("(x + -x)", "0"),
+    str2rule("(-x + x)", "0"),
+    str2rule("(x * 0)", "0"),
+    str2rule("(x * 1)", "x"),
+    str2rule("(0 + x)", "x"),
+    str2rule("(0 * x)", "0"),
+    str2rule("(1 * x)", "x"),
+    str2rule("(x * -1)", "-x"),
+    str2rule("(-1 * x)", "-x"),
+    str2rule("(x / x)", "1"),
+    str2rule("(0 / x)", "0"),
+    str2rule("((x * z) + (y * z))", "((x + y) * z)"),
+    str2rule("((x * z) + (y * z))", "((x + y) * z)"),
+    str2rule("((x + y) * z)", "((x * z) + (y * z))"),
+    str2rule("((x + y) + z)", "(x + (y + z))"),
+    str2rule("((x * y) * z)", "(x * (y * z))"),
+    str2rule("((x * x) - (y * y))", "((x - y) * (x + y))"),
+    str2rule("((x - y) * (x + y))", "((x * x) - (y * y))"),
+    str2rule("((x - y) * (x - y))", "(((x * x) + (y * y)) - (2 * (x * y)))"),
+    str2rule("(((x * x) + (y * y)) - (2 * (x * y)))", "((x - y) * (x - y))"),
+    str2rule("((x + y) * (x + y))", "(((x * x) + (y * y)) + (2 * (x * y)))"),
+    str2rule("(((x * x) + (y * y)) + (2 * (x * y)))", "((x + y) * (x + y))"),
+    str2rule("(((x * x) + (y * y)) + (2 * (x * y)))", "((x + y) * (x + y))")
+];
+
+simplifyExpr(e: ArExpr, rules: [Rule_])-> ArExpr {
+    to_ret = fold(rules, e, \expr, rl ->
+            switch(matchAll(e, rl.pattern)) {
+                None(): expr;
+                Some(_context): { 
+                    to_change = change(rl.replacement, _context);
+                    if(weight(to_change) <= weight(expr)) {
+                        to_change;
+                    }
+                    else {
+                        expr;
+                    }
+                }
+            }
+        );
+    to_ret;
+}
+
+simplifyAll(e: ArExpr) -> ArExpr {
+    simplifyExpr(e, rules);
+}
+
+matchAll(test: ArExpr, pattern: ArExpr) -> Maybe<Tree<string, ArExpr>> {
+    match(test, pattern, makeTree());
+}
+
+match(test: ArExpr, pred: ArExpr, _context:Tree<string, ArExpr>)-> Maybe<Tree<string, ArExpr>> {
+    switch(pred) { 
+        ArInt(c_1): {
+			switch(test) {
+				ArInt(c_2): {
+                    if (c_1 == c_2) Some(_context)
+                    else None();
+                }
+				default: None();
+			}
+		}
+
+        ArSum(l, r): {
+            switch(test){
+                ArSum(l_1, r_1): {
+                    switch(match(simplifyAll(l_1), l, _context)) {
+                        Some(context): match(simplifyAll(r_1), r, context);
+                        default: None();
+                    }
+                }
+                default: None();
+            };
+        }
+
+        ArMult(l, r): {
+            switch(test){
+                ArMult(l_1, r_1): {
+                    switch(match(simplifyAll(l_1), l, _context)) {
+                        Some(context): match(simplifyAll(r_1), r, context);
+                        default: None();
+                    }
+                }
+                default: None();
+            };
+        }
+
+        ArDiv(l, r): {
+            switch(test) {
+                ArDiv(l_1, r_1): {
+                    switch(match(simplifyAll(l_1), l, _context)) {
+                        Some(context): match(simplifyAll(r_1), r, context);
+                        default: None();
+                    }
+                }
+                default: None();
+            };
+        }
+
+        ArMin(l, r): {
+            switch(test) {
+                ArMin(l_1, r_1): {
+                    switch(match(simplifyAll(l_1), l, _context)) {
+                        Some(context): match(simplifyAll(r_1), r, context);
+                        default: None();
+                    }
+                }
+                default: None();
+            };
+        }
+
+        ArNeg(a1): { 
+            switch(test) {
+                ArNeg(a2): match(a2, a1, _context);
+                default: None();
+            }
+        }
+        
+        ArVar(name): {
+            switch (lookupTree(_context, name)) {
+                None(): Some(setTree(_context, name, test));
+                Some(expr): {
+                    if(expr == test) Some(_context)
+                    else None();
+                }
+            }
+        }    
+    }
+}
+
+p2s(p: Polynom) -> string {
+    trim2(concatStrings(foldTree(p.vars, [], \k,v,acc -> {
+        koef = i2s(v);
+        if (koef == "1") {
+            concat(acc, [m2s(k) + " + "]);
+        }
+        else if (koef == "-1") {
+            concat(acc, ["-" + m2s(k) + " + "]);
+        }
+        else {
+            concat(acc, [koef + m2s(k) + " + "]);
+        }
+    }
+    )), " + ");
+}
+
+rf2s(rf: RationalFunction) -> string {
+    if (rf.denominator == rf.numerator) {
+        "1";
+    }
+    else if (rf.denominator == Polynom(setTree(TreeEmpty(), Monom(TreeEmpty()), 1))) {
+        p2s(rf.numerator);
+    }
+    else {
+        concatStrings(["(", p2s(rf.numerator) ,") / (", p2s(rf.denominator) ,")"]);
+    }
+}
+
+m2s(m: Monom) -> string {
+    trim2(concatStrings(foldTree(m.monom , [], \k, v, acc -> {
+        pow = i2s(v);
+        if (pow == "1") {
+            concat(acc, [k + " * "])
+        }
+        else {
+            concat(acc, [k + "^" + i2s(v) + " * "]);
+        }   
+    } 
+    )), " * ");
+}
+
+filterMonom(m: Monom) -> Monom {
+    Monom(filterTree(m.monom, \k, v -> v != 0));
+}
+
+multMonoms(l: Monom, r: Monom) -> Monom {
+    filterMonom(Monom(mergeTreeCustom(l.monom, r.monom, \k, lv, rv -> rv + lv)));
+}
+
+simplifyRat(expr : RationalFunction) -> RationalFunction {
+    num = filterPolynom(expr.numerator);
+
+    numer = Polynom(foldTree(num.vars, makeTree(), \k, v, ac -> {
+            switch (lookupTree(ac, k)) {
+                Some(coef): setTree(ac, k, coef + v);
+                None(): setTree(ac, k, v);
+            }     
+    }));
+    den = filterPolynom(expr.denominator);
+    denom = Polynom(foldTree(den.vars, makeTree(), \k, v, ac -> {
+            switch (lookupTree(ac, k)) {
+                Some(coef): setTree(ac, k, coef + v);
+                None(): setTree(ac, k, v);
+            }     
+    }));
+    RationalFunction(numer, denom);
+
+}
+
+makeFun(e: ArExpr) -> RationalFunction {
+    switch (e) {
+        ArSum(l,r): {
+            left = makeFun(l);
+            right = makeFun(r);
+            if (isNullRatFun(left) == 1 || isNullRatFun(right) == 1) {
+                nullRatFun();
+            }
+            else {
+                sumRationalFunctions(makeFun(l), makeFun(r));
+            }
+        }
+        ArMult(l,r): {
+            left = makeFun(l);
+            right = makeFun(r);
+            if (isNullRatFun(left) == 1 || isNullRatFun(right) == 1) {
+                nullRatFun();
+            }
+            else {
+                multRationalFunctions(makeFun(l), makeFun(r));
+            }
+        }
+        ArMin(l,r): {
+            left = makeFun(l);
+            right = makeFun(r);
+            if (isNullRatFun(left) == 1 || isNullRatFun(right) == 1) {
+                nullRatFun();
+            }
+            else {
+                subRationalFunctions(makeFun(l), makeFun(r));
+            }
+        }
+        ArDiv(l,r): {
+            left = makeFun(l);
+            right = makeFun(r);
+            if (isZeroPolynom(right.numerator) == 1) {
+                nullRatFun();
+            }
+            else if (isNullRatFun(left) == 1 || isNullRatFun(right) == 1) {
+                nullRatFun();
+            }
+            else {
+                divRationalFunctions(makeFun(l), makeFun(r));
+            }
+        }            
+    
+        ArNeg(expr): {
+            f = makeFun(expr);
+            if (isNullRatFun(f) == 1) {
+                f;
+            }
+            else {
+                minusRationalFunction(makeFun(expr));
+            }
+        }
+        ArInt(v): 
+            RationalFunction(
+                Polynom(setTree(makeTree(), Monom(makeTree()), v)),
+                Polynom(setTree(makeTree(), Monom(makeTree()), 1))
+            );
+        ArVar(name): 
+            RationalFunction(
+                Polynom(setTree(makeTree(), Monom(setTreeValues(makeTree(),[Pair(name, 1)])), 1)),
+                Polynom(setTree(makeTree(), Monom(makeTree()), 1))
+            );
+    }
+}
+
+zeroPolynom() -> Polynom {
+    Polynom(TreeNode(Monom(TreeEmpty()), 1, TreeEmpty(), TreeEmpty(), 0));
+}
+
+onePolynom() -> Polynom {
+    Polynom(TreeNode(Monom(TreeEmpty()), 1, TreeEmpty(), TreeEmpty(), 1));
+}
+
+getPCount(p: Polynom) -> [string] {
+    foldTree(p.vars, [], \k,v,acc -> {
+        koef = i2s(v);
+        if (koef != "0") {
+            concat(acc, [""]);
+        }
+        else {
+            acc;
+        }
+    });
+}
+
+isZeroPolynom(p: Polynom) -> int {
+    if (length(getPCount(p)) == 0) {
+        1;
+    }
+    else {
+        0;
+    }
+}
+
+ar2rf(e: ArExpr) -> RationalFunction {
+    rf = makeFun(e);
+    if (isNullRatFun(rf) == 1) {
+        rf;
+    }
+    else if (isZeroRatFun(rf) == 1) {
+        zeroRatFun();
+    }
+    else {
+        rf2 = RationalFunction(filterPolynom(rf.numerator), filterPolynom(rf.denominator));
+        polyGCD = gcd(GCD(rf2.numerator), GCD(rf2.denominator));
+        rf3 = divRationalFunctionByInt(rf2, polyGCD);
+        numGCD = GCD(rf3.numerator);
+        rf3_num = divPolynomByInt(rf3.numerator, numGCD);
+
+        if (rf3_num == rf3.denominator) {
+            RationalFunction(
+                Polynom(setTree(makeTree(), Monom(makeTree()), numGCD)), 
+                Polynom(setTree(makeTree(), Monom(makeTree()), 1))
+            );
+        } 
+        else {
+            rf3;
+        }
+    }
+}
+
+filterPolynom(p: Polynom) -> Polynom {
+    Polynom(filterTree(p.vars, \k, v -> v != 0));
+}
+
+GCD(p: Polynom) -> int {
+    initial = getTreeValues(p.vars)[0];
+    foldTree(p.vars, initial, \k, v, acc -> gcd(acc,v));
+}
+
+divPolynomByInt(p: Polynom, c: int) -> Polynom {
+    Polynom(mapTree(p.vars, \v -> v/c));
+}
+
+divRationalFunctionByInt(rf: RationalFunction, c: int) -> RationalFunction {
+    RationalFunction(
+        divPolynomByInt(rf.numerator, c), 
+        divPolynomByInt(rf.denominator, c)
+    );
+}
+
+sumRationalFunctions(l: RationalFunction, r: RationalFunction) -> RationalFunction {
+    RationalFunction(
+        sumPolynoms(multPolynoms(l.numerator, r.denominator), multPolynoms(r.numerator, l.denominator)),
+        multPolynoms(l.denominator, r.denominator)
+    );
+}
+
+subRationalFunctions(l: RationalFunction, r: RationalFunction) -> RationalFunction {
+    RationalFunction(
+        sumPolynoms(multPolynoms(l.numerator, r.denominator), minusPolynom(multPolynoms(r.numerator, l.denominator))), 
+        multPolynoms(l.denominator, r.denominator)
+    );
+}
+
+multRationalFunctions(l: RationalFunction, r: RationalFunction) -> RationalFunction {
+    RationalFunction(
+        multPolynoms(l.numerator, r.numerator), 
+        multPolynoms(l.denominator, r.denominator)
+    );
+}
+
+divRationalFunctions(l: RationalFunction, r: RationalFunction) -> RationalFunction {
+    RationalFunction(
+        multPolynoms(l.numerator, r.denominator), 
+        multPolynoms(l.denominator, r.numerator)
+    );
+}
+
+minusRationalFunction(rf: RationalFunction) -> RationalFunction {
+    RationalFunction(minusPolynom(rf.numerator), rf.denominator);
+}
+
+sumPolynoms(l: Polynom, r: Polynom) {
+    Polynom(mergeTreeCustom(l.vars, r.vars, \k, lv, rv -> lv + rv));
+}
+
+multPolynoms(l: Polynom, r: Polynom) {
+    Polynom(
+        foldTree(l.vars, makeTree(), \lp, lc, acc -> {
+            foldTree(r.vars, acc, \rp, rc, ac -> {
+                m = multMonoms(lp, rp);
+                switch(lookupTree(ac, m)) {
+                    Some(coef): setTree(ac, m, coef + (lc * rc));
+                    None(): setTree(ac, m, (lc * rc));
+                }     
+            });
+    }));
+}
+
+minusPolynom(p: Polynom) -> Polynom {
+    Polynom(mapTree(p.vars, \r -> -r));
+}
+
+is_none(number : RatNumber) -> int {
+    if (number.numerator == 0 && number.denominator == 0) {
+        1;
+    }
+    else {
+        0;
+    }
+}
+
+ratSum(x: RatNumber, y: RatNumber) -> RatNumber {
+    if (is_none(x) == 1 || is_none(y) == 1) {
+        RatNumber(0, 0);
+    }
+    else {
+        newNumerator = x.numerator * y.denominator + y.numerator * x.denominator;
+        newDenominator = x.denominator * y.denominator;
+        divider = gcd(newNumerator, newDenominator);
+        RatNumber(newNumerator / divider, newDenominator / divider);
+    }
+}
+
+ratMin(x: RatNumber, y: RatNumber) -> RatNumber {
+    if (is_none(x) == 1 || is_none(y) == 1) {
+        RatNumber(0, 0);
+    }
+    else {
+        newNumerator = x.numerator * y.denominator - y.numerator * x.denominator;
+        newDenominator = x.denominator * y.denominator;
+        divider = gcd(newNumerator, newDenominator);
+        RatNumber(newNumerator / divider, newDenominator / divider);
+    }
+}
+
+ratArMultt(x: RatNumber, y: RatNumber) -> RatNumber {
+    if (is_none(x) == 1 || is_none(y) == 1) {
+        RatNumber(0, 0);
+    }
+    else {
+        newNumerator = x.numerator * y.numerator;
+        newDenominator = x.denominator * y.denominator;
+        divider = gcd(newNumerator, newDenominator);
+        RatNumber(newNumerator / divider, newDenominator / divider);
+    }
+}
+
+ratArDiv(x: RatNumber, y: RatNumber) -> RatNumber {
+    if (is_none(x) == 1 || y.numerator == 0) {
+        RatNumber(0, 0);
+    }
+    else {
+        newNumerator = x.numerator * y.denominator;
+        newDenominator = x.denominator * y.numerator;
+        divider = gcd(newNumerator, newDenominator);
+        RatNumber(newNumerator / divider, newDenominator / divider);
+    }
+}
+
+ratArNeg(x: RatNumber) -> RatNumber {
+    if (is_none(x) == 1) {
+        RatNumber(0, 0);
+    }
+	else {
+        RatNumber(-x.numerator,  x.denominator);
+    }
+}
+
+rat2s(x: RatNumber) -> string {
+	if (x.denominator == 1) {
+        i2s(x.numerator)
+    } 
+    else if (x.denominator == 0) {
+        "Error: division by zero!!!";
+    } 
+    else {
+        i2s(x.numerator) + "/" + i2s(x.denominator);
+    }  
+}
 
 s2ar(str: string) -> ArExpr {
     e_gr = "#include arith.lingo";
@@ -14,10 +572,14 @@ s2ar(str: string) -> ArExpr {
     );
 }
 
-ar2s(exp: ArExpr) -> string {
-    switch (exp) {
+ar2s(expr: ArExpr) -> string {
+    switch (expr) {
         ArSum(lhs, rhs) : "(" + ar2s(lhs) + " + " + ar2s(rhs) + ")";
+        ArMin(lhs, rhs) : "(" + ar2s(lhs) + " - " + ar2s(rhs) + ")";
         ArMult(lhs, rhs) : "(" + ar2s(lhs) + " * " + ar2s(rhs) + ")";
+        ArDiv(lhs, rhs) : "(" + ar2s(lhs) + " / " + ar2s(rhs) + ")";
+        ArVar(name) : name;
+        ArNeg(val) : "-" + ar2s(val);
         ArInt(val): i2s(val);
     }
 }
@@ -25,13 +587,222 @@ ar2s(exp: ArExpr) -> string {
 solve(expr: ArExpr) -> int {
     switch (expr) {
         ArSum(lhs, rhs) : solve(lhs) + solve(rhs);
+        ArMin(lhs, rhs) : solve(lhs) - solve(rhs);
         ArMult(lhs, rhs) : solve(lhs) * solve(rhs);
+        ArDiv(lhs, rhs) : solve(lhs) / solve(rhs);
+        ArNeg(e): -solve(e);
+        ArVar(name): {
+            println("Enter value " + name + ": ");
+            s2i(readUntil("\n"));
+        }
         ArInt(val): val;
     }
 }
 
+ar2rat(expr: ArExpr) -> RatNumber {
+    switch (expr) {
+        ArSum(lhs, rhs) : ratSum(ar2rat(lhs), ar2rat(rhs));
+        ArMin(lhs, rhs) : ratMin(ar2rat(lhs), ar2rat(rhs));
+        ArMult(lhs, rhs) : ratArMultt(ar2rat(lhs), ar2rat(rhs));
+        ArDiv(lhs, rhs) : ratArDiv(ar2rat(lhs), ar2rat(rhs));
+        ArNeg(e): ratArNeg(ar2rat(e));
+        ArVar(name): {
+            println("Enter numerator of " + name + ": ");
+            numerator = s2i(readUntil("\n"));
+            println("Enter denominator of " + name + ": ");
+            denominator = s2i(readUntil("\n"));
+            if (denominator == 0) {
+                RatNumber(0, 0);
+            }
+            else {
+                divider = gcd(numerator, denominator);
+                RatNumber(numerator / divider, denominator / divider);
+            }
+        }
+        ArInt(val): RatNumber(val, 1);
+    }
+}
+
+test_rational(input: string) -> void {
+    println(ar2s(s2ar(input)));
+    rat = ar2rat(s2ar(input));
+    println(rat);
+    println(rat2s(rat));
+}
+
+derivate(expr: ArExpr, var: string) -> ArExpr {
+    switch (expr) {
+        ArSum(l, r): ArSum(derivate(l, var), derivate(r, var));
+        ArMin(l, r): ArMin(derivate(l, var), derivate(r, var));
+        ArMult(l,r): ArSum(ArMult(derivate(l, var), r), ArMult(l, derivate(r, var)));
+        ArDiv(l, r): ArDiv(ArMin(ArMult(derivate(l, var), r), ArMult(l, derivate(r, var))), ArMult(r, r));
+        ArNeg(expression): ArNeg(derivate(expression, var));
+        ArInt(v): ArInt(0);
+        ArVar(var1): {
+            if (var == var1) {
+                ArInt(1);
+            } 
+            else {
+                ArInt(0);
+            }; 
+        }
+    }
+}
+
+simplify(expr: ArExpr) -> ArExpr {
+    res = switch (expr) {
+        ArSum(l, r):
+            if (l == ArInt(0) && r == ArInt(0)) {
+                ArInt(0);
+            } 
+            else if (l == ArInt(0)) {
+                r;
+            }
+            else if (r == ArInt(0)) {
+                l;
+            }
+            else {
+                ArSum(simplify(l), simplify(r));
+            };
+        ArMin(l, r): 
+            if (l == ArInt(0) && r == ArInt(0)) {
+                ArInt(0);
+            } 
+            else if (l == r) {
+                ArInt(0);
+            }
+            else if (l == ArInt(0)) {
+                ArNeg(r);
+            }
+            else if (r == ArInt(0)) {
+                l;
+            }
+            else {
+                ArMin(simplify(l), simplify(r));
+            };
+        ArMult(l, r): 
+            if (l == ArInt(0) || r == ArInt(0)) {
+                ArInt(0);
+            } 
+            else if (l == ArInt(1)) {
+                r;
+            }
+            else if (r == ArInt(1)) {
+                l;
+            } 
+            else {
+                ArMult(simplify(l), simplify(r));
+            };
+        ArDiv(l, r): 
+            if (l == r) {
+                ArInt(1);
+            }
+            else if (r == ArInt(1)) {
+                l;
+            } 
+            else {
+                ArDiv(simplify(l), simplify(r));
+            };
+        ArNeg(expression): 
+            ArNeg(simplify(expression));
+        ArInt(v): 
+            ArInt(v);
+        ArVar(name): 
+            ArVar(name); 
+    }
+    if (res == expr) {
+        const_simplify(res);
+    }
+    else {
+        simplify(res);
+    }
+}
+
+const_simplify(expr: ArExpr) -> ArExpr {
+    res = switch (expr) {
+        ArSum(l, r): {
+            switch (l) {
+                ArInt(val1): {
+                    switch (r) {
+                        ArInt(val2): {
+                            ArInt(val1 + val2);
+                        }
+                        default: ArSum(const_simplify(l), const_simplify(r));
+                    }
+                }
+                default: ArSum(const_simplify(l), const_simplify(r));
+            }
+        }
+        ArMin(l, r): {
+            switch (l) {
+                ArInt(val1): {
+                    switch (r) {
+                        ArInt(val2): {
+                            ArInt(val1 - val2);
+                        }
+                        default: ArMin(const_simplify(l), const_simplify(r));
+                    }
+                }
+                default: ArMin(const_simplify(l), const_simplify(r));
+            }
+        }
+        ArMult(l, r): {
+            switch (l) {
+                ArInt(val1): {
+                    switch (r) {
+                        ArInt(val2): {
+                            ArInt(val1 * val2);
+                        }
+                        default: ArMult(const_simplify(l), const_simplify(r));
+                    }
+                }
+                default: ArMult(const_simplify(l), const_simplify(r));
+            }
+        }
+        ArNeg(expression): ArNeg(const_simplify(expression));
+        ArDiv(l, r): ArDiv(const_simplify(l), const_simplify(r));
+        ArVar(name): ArVar(name); 
+        default: expr;
+    }
+    if (res == expr) {
+        res;
+    }
+    else {
+        const_simplify(res);
+    }
+}
+
+test_simplify(input: string) -> void {
+    println(ar2s(simplify(s2ar(input))));
+}
+
+test_derivate(input: string, var: string) -> void {
+    derExpr = derivate(s2ar(input), var);
+    println(ar2s(simplify(derExpr)));
+}
+
+test_polynom(example : string) -> void {
+    rf = ar2rf(simplifyAll(s2ar(example)));
+    if (isNullRatFun(rf) == 1) {
+        println("Error: division by zero!");
+    }
+    else if (rf == RationalFunction(zeroPolynom(), onePolynom())) {
+        println("0");
+    }
+    else {
+        result = rf2s(simplifyRat(rf));
+        println(result);
+    }
+}
+
 main() {
-    example = "(((3 + 1) * 9) + ((12 + 2) * 2))";
-    println(ar2s(s2ar(example)));
-    println(solve(s2ar(example)));
+    // example = "(((((9 * x) * x) - 4) / ((3 * x) + 2)) - (3 * x))"; //(9x^2 - 4) / (3x + 2) - 3x = -2
+    // example = "(((x+2)*13) / ((13*y)*(x+y)))";
+    // example = "((((x - 6) / (6 * y)) / (((x * x) - (y * y)) / y)) * (((x * x) + ((2 * (x * y)) + (y * y))) / x))";
+    // example = "((((x - 6) / (6 * y)) / (((x * x) - (y * y)) / y)) * (((x * x) + ((2 * (x * y)) + (y * y))) / x))";
+    // example = "(( ((9 * (x * x)) - 4) / ((3 * x) + 2)) - (3 * x))";
+    // example = "(((4 * (a * a)) - 9) * ((1 / ((2 * a) - 3)) - (1 / ((2 * a) + 3))))";
+    example = "(((x + y) + z) + ((-x + -y) + -z))";
+    // example = "(x / (y - y))";
+    test_polynom(example);
 }
