@@ -40,26 +40,6 @@ public final class Main {
             logger.info("You don't have any working network interfaces.");
             return null;
         }
-
-        if (networkInterfaces.size() == 1) {
-            return networkInterfaces.get(0);
-        }
-
-        System.out.println("Choose network interface");
-        for (int i = 0; i < networkInterfaces.size(); i++) {
-            System.out.println(i + ": " + networkInterfaces.get(i).toString());
-        }
-
-        int selected;
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            selected = scanner.nextInt();
-            if (selected < 0 || selected > networkInterfaces.size()) {
-                System.out.println("Wrong number. Choose again: ");
-                continue;
-            }
-            break;
-        }
-        return networkInterfaces.get(selected);
+        return networkInterfaces.get(0);
     }
 }
