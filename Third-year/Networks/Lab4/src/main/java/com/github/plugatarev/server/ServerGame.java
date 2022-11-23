@@ -10,20 +10,12 @@ import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
 import com.github.plugatarev.gamehandler.game.Game;
 import com.github.plugatarev.messages.MessageHandler;
+import com.github.plugatarev.messages.MessageOwner;
+import com.github.plugatarev.messages.messages.*;
 import lombok.Getter;
 import org.apache.log4j.Logger;
-import com.github.plugatarev.messages.messages.AckMessage;
-import com.github.plugatarev.messages.messages.AnnouncementMessage;
-import com.github.plugatarev.messages.messages.ErrorMessage;
-import com.github.plugatarev.messages.messages.JoinMessage;
-import com.github.plugatarev.messages.messages.Message;
-import com.github.plugatarev.messages.messages.PingMessage;
-import com.github.plugatarev.messages.messages.RoleChangeMessage;
-import com.github.plugatarev.messages.messages.StateMessage;
-import com.github.plugatarev.messages.messages.SteerMessage;
 import com.github.plugatarev.utils.PlayerUtils;
 
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -41,21 +33,19 @@ public final class ServerGame implements ServerHandler {
     private static final int EMPTY = -1;
     private static final Logger logger = Logger.getLogger(ServerGame.class);
     public static final int ANNOUNCEMENT_SEND_PERIOD_MS = 1000;
-
+//    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
     private final GameHandler game;
     private final SnakesProto.GameConfig gameConfig;
     private final Map<Player, SnakesProto.Direction> playersMoves = new ConcurrentHashMap<>();
     private final Map<Player, Instant> playersLastSeen = new ConcurrentHashMap<>();
     private final AtomicLong msgSeq = new AtomicLong(0);
     private final MessageHandler messageHandler = createMessageHandler();
-    private final ExecutorService executorService = Executors.newFixedThreadPool(1);
-    //TODO:
-    private final String gameName = "test";
+    private final String gameName;
 
     @Getter private final RDTSocket socket;
     private final InetSocketAddress multicastAddress;
 
-    private Future<?> activeDeputyTask = null;
+//    private Future<?> activeDeputyTask = null;
     private Timer timer = new Timer();
     private Thread receiveThread = null;
     private Player masterPlayer = null;
@@ -63,12 +53,15 @@ public final class ServerGame implements ServerHandler {
     private Player potentialDeputyPlayer = null;
     private boolean isDeputyBeingChosen = false;
 
-    public ServerGame(SnakesProto.GameConfig gameConfig, InetSocketAddress multicastAddress, InetAddress masterAddress, int masterPort, String masterName, NetworkInterface networkInterface) throws IOException {
+    public ServerGame(SnakesProto.GameConfig gameConfig, InetSocketAddress multicastAddress,
+                      InetAddress masterAddress, int masterPort, String masterName,
+                      NetworkInterface networkInterface, String gameName) throws IOException {
         this.gameConfig = gameConfig;
         this.game = new Game(gameConfig, this);
         this.multicastAddress = multicastAddress;
         this.socket = new GameSocket(networkInterface, this.gameConfig.getStateDelayMs() / 10);
         this.socket.start();
+        this.gameName = gameName;
 
         Optional<Player> playerOptional = registerNewPlayer(new NetNode(masterAddress, masterPort), masterName);
         playerOptional.ifPresent(player -> {
@@ -81,21 +74,22 @@ public final class ServerGame implements ServerHandler {
         startReceivingMessages();
     }
 
-    public ServerGame(GameState gameState, InetSocketAddress multicastAddress, NetworkInterface networkInterface) throws IOException {
+    public ServerGame(GameState gameState, InetSocketAddress multicastAddress, NetworkInterface networkInterface, String gameName) throws IOException {
         gameConfig = gameState.getGameConfig();
         game = new Game(gameState, this);
         this.multicastAddress = multicastAddress;
+        this.gameName = gameName;
         socket = new GameSocket(networkInterface, gameConfig.getStateDelayMs() / 10);
         socket.start();
 
         gameState.getActivePlayers().forEach(player -> {
-            player.setRole(NodeRole.MASTER.equals(player.getRole()) ? NodeRole.NORMAL : player.getRole());
-            player.setRole(NodeRole.DEPUTY.equals(player.getRole()) ? NodeRole.MASTER : player.getRole());
-            if (NodeRole.MASTER.equals(player.getRole())) {
+            player.setRole(player.getRole().equals(NodeRole.MASTER) ? NodeRole.NORMAL : player.getRole());
+            player.setRole(player.getRole().equals(NodeRole.DEPUTY) ? NodeRole.MASTER : player.getRole());
+            if (player.getRole().equals(NodeRole.MASTER)) {
                 masterPlayer = player;
             }
-            this.playersLastSeen.put(player, Instant.now());
-            if (!NodeRole.VIEWER.equals(player.getRole())) {
+            playersLastSeen.put(player, Instant.now());
+            if (!player.getRole().equals(NodeRole.VIEWER)) {
                 playersMoves.put(player, game.getSnakeByPlayer(player).getDirection());
             }
         });
@@ -106,10 +100,8 @@ public final class ServerGame implements ServerHandler {
 
     @Override
     public void update(GameState gameState) {
-        var playerList = new ArrayList<>(playersLastSeen.keySet());
         this.playersLastSeen.keySet()
                 .forEach(player -> socket.sendWithoutConfirm(
-//                            new StateMessage(gameState, playerList, msgSeq.getAndIncrement(), masterPlayer.getId(), player.getId()),
                                 new StateMessage(gameState, msgSeq.getAndIncrement(), masterPlayer.getId(), player.getId()),
                             player.getNetNode()
                         )
@@ -146,7 +138,7 @@ public final class ServerGame implements ServerHandler {
     }
 
     private void startGameUpdateTimer() {
-        this.timer.schedule(
+        timer.schedule(
                 new TimerTask() {
                     @Override
                     public void run() {
@@ -158,12 +150,14 @@ public final class ServerGame implements ServerHandler {
     }
 
     private void startSendAnnouncementMessages() {
-        this.timer.schedule(
+        timer.schedule(
                 new TimerTask() {
                     @Override
                     public void run() {
+                        AnnouncementMessage announcementMessage = new AnnouncementMessage(msgSeq.getAndIncrement());
+                        announcementMessage.addGame(playersLastSeen.keySet().stream().toList(), gameConfig, gameName, true);
                         socket.sendWithoutConfirm(
-                                new AnnouncementMessage(gameConfig, new ArrayList<>(playersLastSeen.keySet()), true, gameName, msgSeq.getAndIncrement()),
+                                announcementMessage,
                                 new NetNode(multicastAddress.getAddress(), multicastAddress.getPort())
                         );
                     }
@@ -200,10 +194,10 @@ public final class ServerGame implements ServerHandler {
     }
 
     private void startReceivingMessages() {
-        this.receiveThread = new Thread(() -> {
+        receiveThread = new Thread(() -> {
             while (!Thread.currentThread().isInterrupted()) {
-                var recv = socket.receive();
-                handleMessage(recv.getOwner(), recv.getMessage());
+                MessageOwner receive = socket.receive();
+                handleMessage(receive.getOwner(), receive.getMessage());
             }
         });
         receiveThread.start();
@@ -215,6 +209,7 @@ public final class ServerGame implements ServerHandler {
 
     private void handleMessage(NetNode sender, Message message) {
         switch (message.getType()) {
+            case DISCOVER -> messageHandler.handle(sender, (DiscoverMessage) message);
             case ROLE_CHANGE -> messageHandler.handle(sender, (RoleChangeMessage) message);
             case STEER -> messageHandler.handle(sender, (SteerMessage) message);
             case JOIN -> messageHandler.handle(sender, (JoinMessage) message);
@@ -225,23 +220,24 @@ public final class ServerGame implements ServerHandler {
     }
 
     private void chooseNewDeputy() {
-        if (activeDeputyTask != null) {
-            activeDeputyTask.cancel(true);
-        }
+//        if (activeDeputyTask != null) {
+//           activeDeputyTask.cancel(true);
+//        }
         isDeputyBeingChosen = true;
-        activeDeputyTask = executorService.submit(() -> {
+//        activeDeputyTask = executorService.submit(() -> {
             Optional<Player> playerOptional = playersLastSeen.keySet().stream().filter(player -> player.getRole() != NodeRole.MASTER).findAny();
             playerOptional.ifPresentOrElse(
                     this::setDeputyPlayer,
                     () -> {
-                        logger.warn("Cant chose deputy");
+                        logger.warn("Can't chose deputy");
                         isDeputyBeingChosen = false;
                     }
             );
-        });
+//        });
     }
 
-    private void setDeputyPlayer(@NotNull Player deputy) {
+
+    private void setDeputyPlayer(Player deputy) {
         potentialDeputyPlayer = deputy;
         Message response = socket.send(
                 new RoleChangeMessage(NodeRole.MASTER, NodeRole.DEPUTY, msgSeq.getAndIncrement(), masterPlayer.getId(), deputy.getId()),
@@ -255,15 +251,15 @@ public final class ServerGame implements ServerHandler {
         isDeputyBeingChosen = false;
     }
 
-    private boolean isDisconnected(@NotNull Instant moment) {
+    private boolean isDisconnected(Instant moment) {
         return Duration.between(moment, Instant.now()).abs().toMillis() >= gameConfig.getStateDelayMs() * 0.8;
     }
 
     private boolean validateNewPlayer(NetNode sender, JoinMessage joinMsg) {
         if (playersLastSeen.keySet().stream().anyMatch(player -> player.getName().equals(joinMsg.getPlayerName()))) {
             logger.error("Node=" + sender + ": " + "Player with name '" + joinMsg.getPlayerName() + "' already registered as player");
-            this.socket.sendWithoutConfirm(
-                    new ErrorMessage("Player with name already exist", joinMsg.getMessageSequence(), masterPlayer.getId(), -1),
+            socket.sendWithoutConfirm(
+                    new ErrorMessage("Player with name already exist", joinMsg.getMessageSequence(), masterPlayer.getId(), EMPTY),
                     sender
             );
             return false;
@@ -301,14 +297,14 @@ public final class ServerGame implements ServerHandler {
         game.removePlayer(player);
     }
 
-    private void checkRegistration(@NotNull NetNode sender) {
-        if (null == PlayerUtils.findPlayerByAddress(sender, playersLastSeen.keySet())) {
+    private void checkRegistration(NetNode sender) {
+        if (PlayerUtils.findPlayerByAddress(sender, playersLastSeen.keySet()) == null) {
             logger.error("Node=" + sender + " is not registered");
             throw new IllegalArgumentException("Node={" + sender + "} is not registered");
         }
     }
 
-    private void updateLastSeen(@NotNull NetNode sender) {
+    private void updateLastSeen(NetNode sender) {
         Player player = PlayerUtils.findPlayerByAddress(sender, playersLastSeen.keySet());
         if (player != null) {
             playersLastSeen.put(player, Instant.now());
@@ -322,9 +318,7 @@ public final class ServerGame implements ServerHandler {
                 checkRegistration(sender);
                 updateLastSeen(sender);
                 Player player = PlayerUtils.findPlayerByAddress(sender, playersLastSeen.keySet());
-                if (player == null) {
-                    return;
-                }
+                if (player == null) return;
 
                 registerNewMove(player, message.getDirection());
                 logger.debug("NetNode=" + sender + " as player=" + player + " make move with direction=" + message.getDirection());
@@ -332,9 +326,7 @@ public final class ServerGame implements ServerHandler {
 
             @Override
             public void handle(NetNode sender, JoinMessage message) {
-                if (!validateNewPlayer(sender, message)) {
-                    return;
-                }
+                if (!validateNewPlayer(sender, message)) return;
                 registerNewPlayer(sender, message.getPlayerName())
                         .ifPresent(player -> {
                                     logger.debug("NetNode=" + sender + " was successfully registered as player=" + player);
@@ -371,6 +363,14 @@ public final class ServerGame implements ServerHandler {
                     logger.warn("Server: Unsupported roles at role change message=" + message + " from=" + sender);
                     throw new IllegalArgumentException("Unsupported roles at role change message=" + message + " from=" + sender);
                 }
+            }
+
+            @Override
+            public void handle(NetNode sender, DiscoverMessage message) {
+                logger.info("Discover message from " + sender.getAddress() + " " + sender.getPort());
+                AnnouncementMessage announcementMessage = new AnnouncementMessage(msgSeq.getAndIncrement());
+                announcementMessage.addGame(playersLastSeen.keySet().stream().toList(), gameConfig, gameName, true);
+                socket.sendWithoutConfirm(announcementMessage, sender);
             }
         };
     }
