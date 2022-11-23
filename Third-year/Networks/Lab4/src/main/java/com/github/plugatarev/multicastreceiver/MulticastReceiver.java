@@ -1,6 +1,8 @@
 package com.github.plugatarev.multicastreceiver;
 
+import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.datatransfer.NetNode;
+import com.github.plugatarev.gamehandler.Player;
 import org.apache.log4j.Logger;
 import com.github.plugatarev.client.model.Game;
 import com.github.plugatarev.client.view.View;
@@ -10,16 +12,13 @@ import com.github.plugatarev.messages.messages.MessageType;
 import com.github.plugatarev.messages.messages.AnnouncementMessage;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
-import java.net.NetworkInterface;
-import java.net.SocketTimeoutException;
+import java.net.*;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public final class MulticastReceiver {
     private static final Logger logger = Logger.getLogger(MulticastReceiver.class);
@@ -67,28 +66,16 @@ public final class MulticastReceiver {
 
                 while (!Thread.currentThread().isInterrupted()) {
                     DatagramPacket datagramPacket = new DatagramPacket(buffer, BUFFER_SIZE);
-//                    boolean timeoutException = false;
-
                     try {
                         socket.receive(datagramPacket);
                         NetNode sender = new NetNode(datagramPacket.getAddress(), datagramPacket.getPort());
                         Message message = MessageParser.deserializeMessage(datagramPacket);
-                        if (MessageType.ANNOUNCEMENT.equals(message.getType())) {
-                            gameInfos.put(createGameInfo(sender, (AnnouncementMessage) message), Instant.now());
+                        if (message.getType().equals(MessageType.ANNOUNCEMENT)) {
+                            ((AnnouncementMessage) message).getGames().forEach(s -> gameInfos.put(createGameInfo(sender, s), Instant.now()));
                         }
                     }
-                    catch (SocketTimeoutException exception) {
-//                        timeoutException = true;
+                    catch (SocketTimeoutException ignored) {
                     }
-//TODO:
-//                    if (!timeoutException) {
-//                        NetNode sender = new NetNode(datagramPacket.getAddress(), datagramPacket.getPort());
-//                        Message message = MessageParser.deserializeMessage(datagramPacket);
-//                        if (MessageType.ANNOUNCEMENT.equals(message.getType())) {
-//                            gameInfos.put(createGameInfo(sender, (AnnouncementMessage) message), Instant.now());
-//                        }
-//                    }
-
                     gameInfos.entrySet().removeIf(entry ->
                             Duration.between(entry.getValue(), Instant.now()).abs().toMillis() >= SO_TIMEOUT_MS);
                     game.updateActiveGames(gameInfos.keySet());
@@ -101,7 +88,17 @@ public final class MulticastReceiver {
         };
     }
 
-    private GameInfo createGameInfo(NetNode sender, AnnouncementMessage announcementMsg) {
-        return new GameInfo(announcementMsg.getConfig(), sender, announcementMsg.getPlayers(), announcementMsg.isCanJoin());
+    private GameInfo createGameInfo(NetNode sender, SnakesProto.GameAnnouncement game){
+        List<Player> players = game.getPlayers().getPlayersList()
+                                   .stream()
+                                   .map(s -> {
+                                       try {
+                                           return new Player(s.getName(), s.getId(), new NetNode(s.getIpAddress(), s.getPort()), s.getRole(), s.getScore());
+                                       } catch (UnknownHostException e) {
+                                           throw new IllegalStateException("UnknownHost " + e);
+                                       }
+                                   })
+                                   .toList();
+        return new GameInfo(game.getGameName(), game.getConfig(), sender, players, game.getCanJoin());
     }
 }
