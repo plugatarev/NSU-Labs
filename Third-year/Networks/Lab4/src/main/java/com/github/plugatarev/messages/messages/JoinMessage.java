@@ -1,20 +1,20 @@
 package com.github.plugatarev.messages.messages;
 
-import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.GameMessage;
-import com.github.plugatarev.datatransfer.NetNode;
+import com.github.plugatarev.SnakesProto.NodeRole;
+import com.github.plugatarev.SnakesProto.PlayerType;
 import lombok.Getter;
 
 public final class JoinMessage extends Message {
     private static final int EMPTY = -1;
-    @Getter private final NetNode nodeMaster;
+    @Getter private final PlayerType playerType;
     @Getter private final String playerName;
-    @Getter private final SnakesProto.NodeRole role;
+    @Getter private final NodeRole role;
     @Getter private final String gameName;
 
-    public JoinMessage(NetNode nodeMaster, String playerName, SnakesProto.NodeRole role, String gameName, long messageSequence) {
+    public JoinMessage(PlayerType playerType, String playerName, String gameName, NodeRole role, long messageSequence) {
         super(MessageType.JOIN, messageSequence, EMPTY, EMPTY);
-        this.nodeMaster = nodeMaster;
+        this.playerType = playerType;
         this.playerName = playerName;
         this.gameName = gameName;
         this.role = role;

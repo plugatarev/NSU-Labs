@@ -1,7 +1,7 @@
 package com.github.plugatarev.messages;
 
-import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.GameMessage;
+import com.github.plugatarev.SnakesProto.GameMessage.JoinMsg;
 import com.github.plugatarev.gamehandler.GameState;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.experimental.UtilityClass;
@@ -17,7 +17,6 @@ import com.github.plugatarev.messages.messages.PingMessage;
 import com.github.plugatarev.messages.messages.RoleChangeMessage;
 import com.github.plugatarev.messages.messages.StateMessage;
 import com.github.plugatarev.messages.messages.SteerMessage;
-import com.github.plugatarev.utils.PlayerUtils;
 
 import java.net.DatagramPacket;
 import java.net.InetAddress;
@@ -42,23 +41,7 @@ public final class MessageParser {
             return new AckMessage(message.getMsgSeq(), message.getSenderId(), message.getReceiverId());
         }
         else if (message.hasAnnouncement()) {
-            //TODO:
-//            validate(message.getAnnouncement().hasConfig(), "No config");
-//            validate(message.getAnnouncement().hasPlayers(), "No players");
-//            return new AnnouncementMessage(
-//                    message.getAnnouncement().getConfig(),
-//                    PlayerUtils.getPlayerList(message.getAnnouncement().getPlayers().getPlayersList()),
-//                    !message.getAnnouncement().hasCanJoin() || message.getAnnouncement().getCanJoin(),
-//                    message.getMsgSeq()
-//            );
-            SnakesProto.GameConfig c = message.getAnnouncement().getGames(0).getConfig();
-//            return null;
-            return new AnnouncementMessage(
-                    c,
-                    PlayerUtils.getPlayerList(message.getAnnouncement().getPlayers().getPlayersList()),
-                    !message.getAnnouncement().hasCanJoin() || message.getAnnouncement().getCanJoin(),
-                    message.getMsgSeq()
-            );
+            return new AnnouncementMessage(message.getAnnouncement().getGamesList(), message.getMsgSeq());
         }
         else if (message.hasError()) {
             validate(message.getError().hasErrorMessage(), "No error message");
@@ -68,8 +51,8 @@ public final class MessageParser {
         }
         else if (message.hasJoin()) {
             validate(message.getJoin().hasPlayerName(), "No player name");
-            return null;
-//            return new JoinMessage(message.getJoin().getPlayerName(), message.getMsgSeq());
+            JoinMsg msg = message.getJoin();
+            return new JoinMessage(msg.getPlayerType(), msg.getPlayerName(), msg.getGameName(), msg.getRequestedRole(), message.getMsgSeq());
         }
         else if (message.hasPing()) {
             int senderId = message.hasSenderId() ? message.getSenderId() : EMPTY;
@@ -95,7 +78,7 @@ public final class MessageParser {
             validate(message.getState().hasState(), "No state");
 
             GameState state = StateUtils.getStateFromMessage(message.getState().getState());
-            validate(null != state, "Couldn't parse state from message");
+            validate(state != null, "Couldn't parse state from message");
 
             return new StateMessage(
                     state,

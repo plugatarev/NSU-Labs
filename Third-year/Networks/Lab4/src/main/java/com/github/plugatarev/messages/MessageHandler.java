@@ -1,12 +1,7 @@
 package com.github.plugatarev.messages;
 
 import com.github.plugatarev.datatransfer.NetNode;
-import com.github.plugatarev.messages.messages.RoleChangeMessage;
-import com.github.plugatarev.messages.messages.ErrorMessage;
-import com.github.plugatarev.messages.messages.JoinMessage;
-import com.github.plugatarev.messages.messages.PingMessage;
-import com.github.plugatarev.messages.messages.StateMessage;
-import com.github.plugatarev.messages.messages.SteerMessage;
+import com.github.plugatarev.messages.messages.*;
 
 public interface MessageHandler {
     void handle(NetNode sender, SteerMessage message);
@@ -15,4 +10,5 @@ public interface MessageHandler {
     void handle(NetNode sender, StateMessage message);
     void handle(NetNode sender, ErrorMessage message);
     void handle(NetNode sender, RoleChangeMessage message);
+    void handle(NetNode sender, DiscoverMessage message);
 }

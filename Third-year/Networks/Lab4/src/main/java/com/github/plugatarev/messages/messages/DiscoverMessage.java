@@ -3,8 +3,8 @@ import com.github.plugatarev.SnakesProto.GameMessage;
 import com.github.plugatarev.SnakesProto;
 
 public class DiscoverMessage extends Message {
-    public DiscoverMessage(MessageType type, long messageSequence, int senderID, int receiverID) {
-        super(type, messageSequence, senderID, receiverID);
+    public DiscoverMessage(long messageSequence, int senderID, int receiverID) {
+        super(MessageType.DISCOVER, messageSequence, senderID, receiverID);
     }
 
     @Override
