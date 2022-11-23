@@ -2,7 +2,6 @@ package com.github.plugatarev.datatransfer;
 
 import lombok.Getter;
 
-import javax.validation.constraints.NotEmpty;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;

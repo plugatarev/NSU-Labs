@@ -8,7 +8,6 @@ import com.github.plugatarev.messages.messages.AckMessage;
 import com.github.plugatarev.messages.messages.Message;
 import com.github.plugatarev.messages.messages.MessageType;
 
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -159,7 +158,7 @@ public final class GameSocket implements RDTSocket {
         }
     }
 
-    private void addReceivedMessage(@NotNull NetNode sender, @NotNull Message gameMessage) {
+    private void addReceivedMessage(NetNode sender, Message gameMessage) {
         if (gameMessage.getType().equals(MessageType.ACK) || gameMessage.getType().equals(MessageType.ERROR)) {
             synchronized (responses) {
                 responses.put(gameMessage.getMessageSequence(), gameMessage);
