@@ -4,7 +4,7 @@ import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.config.ConfigProperty;
 import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
-import com.github.plugatarev.gamehandler.Point2D;
+import com.github.plugatarev.gamehandler.Coord;
 import com.github.plugatarev.gamehandler.Snake;
 import lombok.experimental.UtilityClass;
 import org.apache.log4j.Logger;
@@ -29,10 +29,6 @@ public final class StateUtils {
 
     private static boolean validateGameState(SnakesProto.GameState state) {
         return state.hasStateOrder() && state.hasPlayers();
-        //TODO
-//        return state.hasStateOrder() &&
-//               state.hasPlayers() &&
-//               state.hasConfig();
     }
 
     public static SnakesProto.GameState createStateForMessage(GameState state) {
@@ -42,7 +38,7 @@ public final class StateUtils {
             builder.addSnakes(SnakeUtils.createSnakeForMessage(snake));
         }
         var coordBuilder = SnakesProto.GameState.Coord.newBuilder();
-        for (Point2D fruit: state.getFoods()) {
+        for (Coord fruit: state.getFoods()) {
             coordBuilder.setX(fruit.getX());
             coordBuilder.setY(fruit.getY());
             builder.addFoods(coordBuilder.build());
@@ -52,8 +48,6 @@ public final class StateUtils {
             playersBuilder.addPlayers(PlayerUtils.createPlayerForMessage(player));
         }
         builder.setPlayers(playersBuilder.build());
-        //TODO
-//        builder.setConfig(ConfigProperty.getConfig());
         return builder.build();
     }
 

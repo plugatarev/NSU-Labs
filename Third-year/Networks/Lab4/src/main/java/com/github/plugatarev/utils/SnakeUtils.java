@@ -2,14 +2,13 @@ package com.github.plugatarev.utils;
 
 import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.GameState;
-import com.github.plugatarev.gamehandler.Point2D;
+import com.github.plugatarev.gamehandler.Coord;
 import com.github.plugatarev.gamehandler.Snake;
 import lombok.experimental.UtilityClass;
 import org.apache.log4j.Logger;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @UtilityClass
 public final class SnakeUtils {
@@ -21,7 +20,7 @@ public final class SnakeUtils {
         builder.setState(snake.getState());
         builder.setHeadDirection(snake.getDirection());
         GameState.Coord.Builder cordBuilder = GameState.Coord.newBuilder();
-        for (Point2D point: snake.getPoints()) {
+        for (Coord point: snake.getPoints()) {
             cordBuilder.setX(point.getX());
             cordBuilder.setY(point.getY());
             builder.addPoints(cordBuilder.build());

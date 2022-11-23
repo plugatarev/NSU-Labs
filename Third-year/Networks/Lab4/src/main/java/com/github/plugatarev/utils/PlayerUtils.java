@@ -40,12 +40,7 @@ public final class PlayerUtils {
     }
 
     public static Player findPlayerByAddress(NetNode node, Set<Player> players) {
-        for (Player player: players) {
-            if (player.getNetNode().equals(node)) {
-                return player;
-            }
-        }
-        return null;
+        return players.stream().filter(player -> player.getNetNode().equals(node)).findFirst().orElse(null);
     }
 
     public static List<Player> getPlayerList(List<GamePlayer> gamePlayers) {
