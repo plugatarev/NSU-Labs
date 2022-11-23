@@ -2,8 +2,8 @@ package com.github.plugatarev.client.controller;
 
 import com.github.plugatarev.SnakesProto.GameConfig;
 import com.github.plugatarev.client.controller.events.MoveEvent;
+import com.github.plugatarev.client.controller.events.ServerPlayerEvent;
 import com.github.plugatarev.client.controller.events.UserEvent;
-import com.github.plugatarev.datatransfer.NetNode;
 import lombok.RequiredArgsConstructor;
 import com.github.plugatarev.client.view.View;
 import com.github.plugatarev.client.model.GameHandler;
@@ -31,6 +31,10 @@ public final class JavaFXController implements GameController {
             case MOVE -> {
                 MoveEvent moveEvent = (MoveEvent) userEvent;
                 gameNetwork.handleMove(moveEvent.getDirection());
+            }
+            case SERVER_PLAYER -> {
+                ServerPlayerEvent serverPlayerEvent = (ServerPlayerEvent) userEvent;
+                gameNetwork.joinServerPlayer(serverPlayerEvent.getServerNetNode());
             }
             case EXIT -> gameNetwork.exit();
         }

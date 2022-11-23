@@ -15,13 +15,13 @@ import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 public final class ActiveGameButton {
-    @NotNull @Getter private final NetNode masterNode;
+    @Getter private final String gameName;
+    @Getter private final NetNode masterNode;
     @Getter private final int playersNumber;
 
-    @NotNull @Getter private final GameConfig config;
-    private final boolean canJoin;
+    @Getter private final GameConfig config;
+//    private final boolean canJoin;
 
-    @Getter private final String masterNodeName;
     @Getter private final String fieldSize;
     @Getter private final String foodNumber;
 
@@ -29,14 +29,14 @@ public final class ActiveGameButton {
 
     public ActiveGameButton(@NotNull GameInfo gameInfo) {
         Objects.requireNonNull(gameInfo); //TODO: mb delete it?
+        gameName = gameInfo.getGameName();
         playersNumber = gameInfo.getPlayers().size();
         config = gameInfo.getConfig();
         masterNode = gameInfo.getMasterNode();
-        canJoin = gameInfo.isCanJoin();
+//        canJoin = gameInfo.isCanJoin();
         button = new Button("Вход");
         fieldSize = config.getHeight() + "x" + config.getWidth();
         foodNumber = config.getFoodStatic() + ": x" + config.getFoodStatic();
-        masterNodeName = gameInfo.getMasterNodeName();
         designButton();
     }
 
@@ -53,11 +53,11 @@ public final class ActiveGameButton {
         if (!(object instanceof ActiveGameButton other)) {
             return false;
         }
-        return masterNode.equals(other.masterNode);
+        return gameName.equals(other.gameName) && masterNode.equals(other.masterNode);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(masterNode);
+        return Objects.hash(masterNode, gameName);
     }
 }

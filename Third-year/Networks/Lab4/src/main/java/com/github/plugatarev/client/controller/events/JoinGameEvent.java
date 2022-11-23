@@ -1,7 +1,6 @@
 package com.github.plugatarev.client.controller.events;
 
 import com.github.plugatarev.SnakesProto.GameConfig;
-import com.github.plugatarev.client.model.Game;
 import com.github.plugatarev.datatransfer.NetNode;
 import lombok.Getter;
 

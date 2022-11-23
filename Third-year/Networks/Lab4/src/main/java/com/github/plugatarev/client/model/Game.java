@@ -1,5 +1,6 @@
 package com.github.plugatarev.client.model;
 
+import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.NodeRole;
 import com.github.plugatarev.SnakesProto.Direction;
 import com.github.plugatarev.SnakesProto.GameConfig;
@@ -10,24 +11,20 @@ import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
 import com.github.plugatarev.messages.MessageHandler;
 import com.github.plugatarev.messages.MessageOwner;
+import com.github.plugatarev.messages.messages.*;
 import com.github.plugatarev.multicastreceiver.GameInfo;
 import com.github.plugatarev.server.ServerGame;
 import com.github.plugatarev.server.ServerHandler;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import lombok.Setter;
 import org.apache.log4j.Logger;
 import com.github.plugatarev.client.view.View;
 import com.github.plugatarev.utils.StateUtils;
-import com.github.plugatarev.messages.messages.ErrorMessage;
-import com.github.plugatarev.messages.messages.MessageType;
-import com.github.plugatarev.messages.messages.RoleChangeMessage;
-import com.github.plugatarev.messages.messages.StateMessage;
-import com.github.plugatarev.messages.messages.SteerMessage;
-import com.github.plugatarev.messages.messages.JoinMessage;
-import com.github.plugatarev.messages.messages.Message;
-import com.github.plugatarev.messages.messages.PingMessage;
 
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.time.Duration;
@@ -46,9 +43,12 @@ public final class Game implements GameHandler {
     private final RDTSocket rdtSocket;
     private final GameConfig config;
     private final String playerName;
+    @Getter private final String gameName;
     private final View view;
     private final InetSocketAddress multicastInfo;
     private final NetworkInterface networkInterface;
+
+    @Setter private NetNode serverNetNode;
 
     private ServerHandler activeServerGame = null;
     private GameState gameState;
@@ -62,9 +62,9 @@ public final class Game implements GameHandler {
     private int playerID = EMPTY;
 
     private final AtomicLong msgSeq = new AtomicLong(0);
-    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
+//    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
     private final MessageHandler messageHandler = createMessageHandler();
-    private Future<?> activeJoinTask = null;
+//    private Future<?> activeJoinTask = null;
     private Timer timer = new Timer();
 
     private long currentSteerMessageSeq = EMPTY;
@@ -80,6 +80,7 @@ public final class Game implements GameHandler {
         this.multicastInfo = multicastInfo;
         this.networkInterface = networkInterface;
         this.playerName = playerName;
+        this.gameName = playerName + "Game";
     }
 
     @Override
@@ -93,7 +94,7 @@ public final class Game implements GameHandler {
         rdtSocket.stop();
         rdtSocket.start();
         try {
-            activeServerGame = new ServerGame(config, multicastInfo, rdtSocket.getAddress(), rdtSocket.getLocalPort(), playerName, networkInterface);
+            activeServerGame = new ServerGame(config, multicastInfo, rdtSocket.getAddress(), rdtSocket.getLocalPort(), playerName, networkInterface, gameName);
             master = new NetNode(rdtSocket.getAddress(), activeServerGame.getPort());
             masterLastSeen = Instant.now();
             gameState = null;
@@ -108,18 +109,17 @@ public final class Game implements GameHandler {
     }
 
     @Override
-    public void joinGame(@NotNull NetNode gameOwner, @NotNull String playerName) {
+    public void joinGame(NetNode gameOwner, String playerName) {
         exit();
         rdtSocket.start();
-        if (activeJoinTask != null) {
-            activeJoinTask.cancel(true);
-        }
-        activeJoinTask = executorService.submit(() -> {
+//        if (activeJoinTask != null) {
+//            activeJoinTask.cancel(true);
+//        }
+//        activeJoinTask = executorService.submit(() -> {
             //TODO:
-            Message response = rdtSocket.send(new JoinMessage(gameOwner, playerName, NodeRole.NORMAL, playerName, msgSeq.get()), gameOwner);
-            if (response == null) {
-                return;
-            }
+            Message response = rdtSocket.send(new JoinMessage(SnakesProto.PlayerType.HUMAN, playerName, gameName, NodeRole.NORMAL, msgSeq.get()), gameOwner);
+            if (response == null) return;
+
             if (response.getType().equals(MessageType.ERROR)) {
                 messageHandler.handle(null, (ErrorMessage) response);
                 return;
@@ -138,7 +138,15 @@ public final class Game implements GameHandler {
             changeNodeRole(NodeRole.NORMAL);
 
             startTimerTasks();
-        });
+//        });
+    }
+
+    @Override
+    public void joinServerPlayer(NetNode serverNetNode) {
+        AnnouncementMessage announcementMessage = new AnnouncementMessage(msgSeq.getAndIncrement());
+        announcementMessage.addGame(gameState.getActivePlayers(), config, gameName, true);
+
+        rdtSocket.sendWithoutConfirm(announcementMessage, serverNetNode);
     }
 
     @Override
@@ -255,7 +263,7 @@ public final class Game implements GameHandler {
         );
     }
 
-    private void handleMessage(@NotNull NetNode sender, @NotNull Message message) {
+    private void handleMessage(NetNode sender, Message message) {
         switch (message.getType()) {
             case ROLE_CHANGE -> messageHandler.handle(sender, (RoleChangeMessage) message);
             case ERROR -> messageHandler.handle(sender, (ErrorMessage) message);
@@ -266,7 +274,7 @@ public final class Game implements GameHandler {
 
     private void swapToMaster()  {
         try {
-            activeServerGame = new ServerGame(gameState, multicastInfo, networkInterface);
+            activeServerGame = new ServerGame(gameState, multicastInfo, networkInterface, gameName);
             master = new NetNode(rdtSocket.getAddress(), activeServerGame.getPort());
             deputy = null;
             masterID = playerID;
@@ -293,7 +301,7 @@ public final class Game implements GameHandler {
         }
     }
 
-    private void changeNodeRole(@NotNull NodeRole nodeRole) {
+    private void changeNodeRole(NodeRole nodeRole) {
         if (config == null) {
             logger.error("Can't change role=" + this.nodeRole + " to " + nodeRole + " without config");
             exit();
@@ -309,6 +317,11 @@ public final class Game implements GameHandler {
 
     private MessageHandler createMessageHandler() {
         return new MessageHandler() {
+            @Override
+            public void handle(NetNode sender, DiscoverMessage message) {
+                logger.error("Client shouldn't receive Discover messages");
+            }
+
             @Override
             public void handle(NetNode sender, SteerMessage message) {
                 logger.error("Client shouldn't receive Steer messages");
@@ -388,8 +401,8 @@ public final class Game implements GameHandler {
                         }
                     }
                     default -> logger.error("Received role change message: me=" + nodeRole +
-                                        ", senderRole=" + roleChangeMsg.getSenderRole() +
-                                        ", receiverRole=" + roleChangeMsg.getReceiverRole());
+                                            ", senderRole=" + roleChangeMsg.getSenderRole() +
+                                            ", receiverRole=" + roleChangeMsg.getReceiverRole());
                 }
             }
         };

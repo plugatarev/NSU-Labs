@@ -9,6 +9,7 @@ import java.util.Set;
 public interface GameHandler {
     void startNewGame();
     void joinGame(NetNode gameOwner, String playerName);
+    void joinServerPlayer(NetNode serverNetNode);
     void handleMove(Direction direction);
     void exit();
     void updateActiveGames(Set<GameInfo> gameInfos);

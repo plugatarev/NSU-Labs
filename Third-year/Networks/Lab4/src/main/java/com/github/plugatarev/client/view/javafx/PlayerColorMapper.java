@@ -8,7 +8,7 @@ import javax.validation.constraints.NotNull;
 import java.util.*;
 
 public final class PlayerColorMapper {
-    @NotNull private final Map<Player, Color> playerColors;
+    private final Map<Player, Color> playerColors;
     private int prevColorIndex;
 
     private static final List<Color> snakeColors = List.of(Color.RED, Color.ORANGE, Color.PURPLE);
@@ -21,7 +21,6 @@ public final class PlayerColorMapper {
         prevColorIndex = new Random().nextInt(snakeColors.size());
     }
 
-    @NotNull
     public Optional<Color> getColor(@NotNull Player player, NetNode self) {
         if (self != null) {
             if (player.getNetNode().equals(self)) {

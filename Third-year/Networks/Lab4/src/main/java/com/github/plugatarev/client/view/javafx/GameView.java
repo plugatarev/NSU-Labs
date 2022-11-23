@@ -4,11 +4,9 @@ import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.GameConfig;
 import com.github.plugatarev.SnakesProto.Direction;
 import com.github.plugatarev.client.controller.GameController;
-import com.github.plugatarev.client.controller.events.ExitEvent;
-import com.github.plugatarev.client.controller.events.JoinGameEvent;
-import com.github.plugatarev.client.controller.events.MoveEvent;
-import com.github.plugatarev.client.controller.events.NewGameEvent;
+import com.github.plugatarev.client.controller.events.*;
 import com.github.plugatarev.client.view.View;
+import com.github.plugatarev.datatransfer.GameSocket;
 import com.github.plugatarev.datatransfer.NetNode;
 import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
@@ -20,10 +18,7 @@ import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
+import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
@@ -33,8 +28,11 @@ import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import org.apache.log4j.Logger;
 
 import javax.validation.constraints.NotNull;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -45,10 +43,12 @@ import java.util.Optional;
 import java.util.Set;
 
 public final class GameView implements View {
+    private static final Logger logger = Logger.getLogger(GameView.class);
+
     private static final Paint FOOD_COLOR = Color.GREEN;
     private static final Paint EMPTY_CELL_COLOR = Color.WHITE;
 
-    private @FXML TableColumn<ActiveGameButton, String> masterColumn;
+    private @FXML TableColumn<ActiveGameButton, String> gameNameColumn;
     private @FXML TableColumn<ActiveGameButton, Integer> playersNumberColumn;
     private @FXML TableColumn<ActiveGameButton, String> fieldSizeColumn;
     private @FXML TableColumn<ActiveGameButton, String> foodColumn;
@@ -60,9 +60,12 @@ public final class GameView implements View {
     private @FXML Label fieldSize;
     private @FXML TableView<Player> playersRankingTable;
     private @FXML Button exitButton;
+    private @FXML Button serverPlayer;
     private @FXML Button newGameButton;
     private @FXML TableView<ActiveGameButton> gameListTable;
     private @FXML BorderPane gameFieldPane;
+    private @FXML TextField serverPort;
+    private @FXML TextField serverName;
 
     private final ObservableList<Player> playersObservableList = FXCollections.observableArrayList();
     private final ObservableList<ActiveGameButton> gameInfoObservableList = FXCollections.observableArrayList();
@@ -75,12 +78,16 @@ public final class GameView implements View {
     private GameConfig gameConfig;
     private GameController gameController;
 
-    public void setGameController(@NotNull GameController controller) {
+    private String serverIPName;
+    private String serverPortName;
+
+    public void setGameController(GameController controller) {
         this.gameController = controller;
     }
 
-    public void setStage(@NotNull Stage stage) {
+    public void setStage(Stage stage) {
         this.stage = stage;
+        this.stage.setMaximized(true);
         this.stage.setOnCloseRequest(event -> close(true));
         this.stage.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
             if (gameController == null) {
@@ -105,13 +112,13 @@ public final class GameView implements View {
     }
 
     @Override
-    public void setConfig(@NotNull GameConfig gameConfig) {
+    public void setConfig(GameConfig gameConfig) {
         this.gameConfig = gameConfig;
         buildField();
     }
 
     @Override
-    public void updateGameList(@NotNull Collection<GameInfo> gameInfos) {
+    public void updateGameList(Collection<GameInfo> gameInfos) {
         activeGameButtons.clear();
         gameInfos.forEach(gameInfo -> {
             ActiveGameButton activeGameButton = new ActiveGameButton(gameInfo);
@@ -120,10 +127,7 @@ public final class GameView implements View {
             Button button = activeGameButton.getButton();
             button.setOnAction(event ->
                     gameController.event(
-                            new JoinGameEvent(
-                                    activeGameButton.getMasterNode(),
-                                    activeGameButton.getConfig()
-                            )
+                            new JoinGameEvent(activeGameButton.getMasterNode(), activeGameButton.getConfig())
                     )
             );
         });
@@ -143,7 +147,7 @@ public final class GameView implements View {
 
     private void initGameListTable() {
         gameListTable.setItems(gameInfoObservableList);
-        masterColumn.setCellValueFactory(new PropertyValueFactory<>("masterNodeName"));
+        gameNameColumn.setCellValueFactory(new PropertyValueFactory<>("gameName"));
         foodColumn.setCellValueFactory(new PropertyValueFactory<>("foodNumber"));
         playersNumberColumn.setCellValueFactory(new PropertyValueFactory<>("playersNumber"));
         fieldSizeColumn.setCellValueFactory(new PropertyValueFactory<>("fieldSize"));
@@ -153,6 +157,24 @@ public final class GameView implements View {
     private void setActionOnButtons() {
         exitButton.setOnAction(event -> close(false));
         newGameButton.setOnAction(event -> gameController.event(new NewGameEvent()));
+
+        serverName.setOnAction(event -> serverIPName = event.toString());
+        serverPort.setOnAction(event -> serverPortName = event.toString());
+
+        serverPlayer.setOnAction(event -> {
+                try {
+                    if (serverIPName != null && serverPortName != null) {
+                        NetNode node = new NetNode(InetAddress.getByName(serverIPName), Integer.parseInt(serverPortName));
+                        gameController.event(new ServerPlayerEvent(node));
+                    } else {
+                        gameController.event(new ServerPlayerEvent());
+                    }
+                }
+                catch (UnknownHostException e) {
+                    logger.error("Server not found. Exception = " + e.getMessage());
+                }
+            }
+        );
     }
 
     private void close(boolean closeStage) {
