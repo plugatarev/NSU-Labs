@@ -29,8 +29,8 @@ public final class JavaFXStarter extends Application {
     @Setter private static String playerName;
     @Setter private static NetworkInterface networkInterface;
 
-    private MulticastReceiver multicastReceiver = null;
-    private Game gameNetwork = null;
+    private MulticastReceiver multicastReceiver;
+    private Game gameNetwork;
 
     public static void main(String[] args) {
         launch(args);
@@ -39,7 +39,6 @@ public final class JavaFXStarter extends Application {
     @Override
     public void start(Stage stage) {
         SnakesProto.GameConfig config = ConfigProperty.getConfig();
-//        ConfigValidator.validate(config);
 
         try {
             InetSocketAddress multicastInfo = new InetSocketAddress(InetAddress.getByName(MULTICAST_ADDRESS), MULTICAST_PORT);
@@ -69,7 +68,6 @@ public final class JavaFXStarter extends Application {
     }
 
     @Override
-    @SneakyThrows
     public void stop() {
         if (multicastReceiver != null) multicastReceiver.stop();
         if (gameNetwork != null) gameNetwork.exit();
