@@ -8,12 +8,11 @@ import lombok.Getter;
 import org.apache.log4j.Logger;
 import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
-import com.github.plugatarev.gamehandler.Point2D;
+import com.github.plugatarev.gamehandler.Coord;
 import com.github.plugatarev.gamehandler.Snake;
 import com.github.plugatarev.server.ServerHandler;
 import com.github.plugatarev.utils.PlayerUtils;
 
-import javax.validation.constraints.NotNull;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -55,33 +54,33 @@ public final class Game implements GameHandler {
         this.stateID = state.getStateID() + 1;
 
         state.getSnakes().forEach(snake -> {
-            snake.getPoints().forEach(point -> this.field.set(point, CellType.SNAKE));
+            snake.getPoints().forEach(point -> field.set(point, CellType.SNAKE));
             switch (snake.getState()) {
-                case ZOMBIE -> this.zombieSnakes.add(snake);
+                case ZOMBIE -> zombieSnakes.add(snake);
                 case ALIVE -> {
                     Player snakeOwner = Optional.ofNullable(PlayerUtils.findPlayerBySnake(snake, state.getActivePlayers()))
-                            .orElseThrow(() -> new IllegalStateException("Cant get player from alive snake"));
-                    this.playersWithSnakes.put(snakeOwner, snake);
+                            .orElseThrow(() -> new IllegalStateException("Can't get player from alive snake"));
+                    playersWithSnakes.put(snakeOwner, snake);
                 }
             }
         });
 
-        for (var player : state.getActivePlayers()) {
-            this.players.add(player);
-            if (player.getId() >= this.playerIDCounter) {
-                this.playerIDCounter = player.getId() + 1;
+        for (Player player : state.getActivePlayers()) {
+            players.add(player);
+            if (player.getId() >= playerIDCounter) {
+                playerIDCounter = player.getId() + 1;
             }
         }
 
         foods = new ArrayList<>(state.getFoods().size());
-        state.getFoods().forEach(fruit -> {
+        for (Coord fruit : state.getFoods()) {
             field.set(fruit, CellType.FOOD);
             foods.add(new Cell(fruit, CellType.FOOD));
-        });
+        }
     }
 
     @Override
-    public Player registerNewPlayer(@NotNull String playerName, NetNode netNode) {
+    public Player registerNewPlayer(String playerName, NetNode netNode) {
         Player player = new Player(playerName, playerIDCounter, netNode);
         playerIDCounter++;
 
@@ -98,40 +97,40 @@ public final class Game implements GameHandler {
         );
 
         playerSnake.setPlayerID(player.getId());
-        snakePoints.forEach(cell -> this.field.set(cell.getY(), cell.getX(), CellType.SNAKE));
+        snakePoints.forEach(cell -> field.set(cell.getY(), cell.getX(), CellType.SNAKE));
 
-        this.players.add(player);
-        this.playersWithSnakes.put(player, playerSnake);
+        players.add(player);
+        playersWithSnakes.put(player, playerSnake);
         return player;
     }
 
     @Override
     public void removePlayer(Player player) {
-        if (this.playersWithSnakes.containsKey(player)) {
-            Snake snake = this.playersWithSnakes.get(player);
+        if (playersWithSnakes.containsKey(player)) {
+            Snake snake = playersWithSnakes.get(player);
             snake.setState(SnakesProto.GameState.Snake.SnakeState.ZOMBIE);
-            this.zombieSnakes.add(snake);
+            zombieSnakes.add(snake);
             markPlayerInactive(player);
         }
     }
 
     @Override
     public void moveAllSnakes(Map<Player, SnakesProto.Direction> playersMoves) {
-        this.playersWithSnakes.keySet().forEach(player -> makeMove(player, playersMoves.getOrDefault(player, null)));
+        playersWithSnakes.keySet().forEach(player -> makeMove(player, playersMoves.getOrDefault(player, null)));
         zombieSnakesMove();
         generateFoods();
 
-        this.playersForRemove.keySet().forEach(player -> {
-            makeFoodsFromSnakeWithProbability(this.playersWithSnakes.get(player));
+        playersForRemove.keySet().forEach(player -> {
+            makeFoodsFromSnakeWithProbability(playersWithSnakes.get(player));
             markPlayerInactive(player);
         });
-        this.playersForRemove.clear();
-        this.serverHandler.update(generateGameState());
+        playersForRemove.clear();
+        serverHandler.update(generateGameState());
     }
 
     @Override
     public Snake getSnakeByPlayer(Player player) {
-        return this.playersWithSnakes.get(player);
+        return playersWithSnakes.get(player);
     }
 
     private List<Cell> createNewSnake() {
@@ -158,16 +157,16 @@ public final class Game implements GameHandler {
     }
 
     private void markPlayerInactive(Player player) {
-        this.playersWithSnakes.remove(player);
-        this.players.remove(player);
+        playersWithSnakes.remove(player);
+        players.remove(player);
     }
 
     private void makeMove(Player player, SnakesProto.Direction direction) {
-        if (!this.playersWithSnakes.containsKey(player)) {
+        if (!playersWithSnakes.containsKey(player)) {
             throw new IllegalArgumentException(UNKNOWN_PLAYER_ERROR_MESSAGE);
         }
 
-        Snake snake = this.playersWithSnakes.get(player);
+        Snake snake = playersWithSnakes.get(player);
         snake.makeMove(direction);
 
         if (isSnakeCrashed(snake)) {
@@ -179,24 +178,24 @@ public final class Game implements GameHandler {
             removeFood(snake.getHead());
         }
         else {
-            this.field.set(snake.getTail(), CellType.EMPTY);
+            field.set(snake.getTail(), CellType.EMPTY);
             snake.removeTail();
         }
-        this.field.set(snake.getHead(), CellType.SNAKE);
+        field.set(snake.getHead(), CellType.SNAKE);
     }
 
-    private void removeFood(Point2D fruitForRemove) {
-        this.foods.removeIf(fruit -> fruitForRemove.equals(fruit.getPoint()));
+    private void removeFood(Coord fruitForRemove) {
+        foods.removeIf(fruit -> fruitForRemove.equals(fruit.getPoint()));
     }
 
     private void handlePlayerLose(Player player, Snake playerSnake) {
-        this.playersForRemove.put(player, playerSnake);
+        playersForRemove.put(player, playerSnake);
     }
 
     private void zombieSnakesMove() {
-        this.zombieSnakes.forEach(this::zombieMove);
-        this.zombieSnakes.stream().filter(this::isSnakeCrashed).forEach(this::makeFoodsFromSnakeWithProbability);
-        this.zombieSnakes.removeIf(this::isSnakeCrashed);
+        zombieSnakes.forEach(this::zombieMove);
+        zombieSnakes.stream().filter(this::isSnakeCrashed).forEach(this::makeFoodsFromSnakeWithProbability);
+        zombieSnakes.removeIf(this::isSnakeCrashed);
     }
 
     private void zombieMove(Snake snake) {
@@ -205,27 +204,23 @@ public final class Game implements GameHandler {
             removeFood(snake.getHead());
         }
         else {
-            this.field.set(snake.getTail(), CellType.EMPTY);
+            field.set(snake.getTail(), CellType.EMPTY);
             snake.removeTail();
         }
-        this.field.set(snake.getHead(), CellType.SNAKE);
+        field.set(snake.getHead(), CellType.SNAKE);
     }
 
     private void generateFoods() {
-        int aliveSnakesCount = this.playersWithSnakes.size();
-        //TODO: new task
-        //int requiredFruitsNumber = this.config.getFoodStatic() + (int) (this.config.getFoodPerPlayer() * aliveSnakesCount);
+        int aliveSnakesCount = playersWithSnakes.size();
         int requiredFruitsNumber = config.getFoodStatic() + aliveSnakesCount;
-        if (foods.size() == requiredFruitsNumber) {
-            return;
-        }
+        if (foods.size() == requiredFruitsNumber) return;
         if (field.getEmptyCellsNumber() < requiredFruitsNumber) {
-            logger.debug("Cant generate required number of fruits=" + requiredFruitsNumber + ", empty cells number=" + field.getEmptyCellsNumber());
+            logger.debug("Can't generate required number of fruits=" + requiredFruitsNumber + ", empty cells number=" + field.getEmptyCellsNumber());
             return;
         }
 
         while (foods.size() < requiredFruitsNumber) {
-            Cell randomEmptyCell = field.findRandomEmptyCell().orElseThrow(() -> new IllegalStateException("Cant find empty cell"));
+            Cell randomEmptyCell = field.findRandomEmptyCell().orElseThrow(() -> new IllegalStateException("Can't find empty cell"));
             field.set(randomEmptyCell.getPoint(), CellType.FOOD);
             foods.add(randomEmptyCell);
         }
@@ -239,12 +234,12 @@ public final class Game implements GameHandler {
     }
 
     private boolean isSnakeAteFood(Snake snake) {
-        Point2D snakeHead = snake.getHead();
+        Coord snakeHead = snake.getHead();
         return foods.stream().anyMatch(fruit -> snakeHead.equals(fruit.getPoint()));
     }
 
     private void makeFoodsFromSnakeWithProbability(Snake snake) {
-        for (Point2D p : snake.getPoints()) {
+        for (Coord p : snake.getPoints()) {
             if (p.equals(snake.getHead())) {
                 continue;
             }
@@ -262,7 +257,7 @@ public final class Game implements GameHandler {
         if (isSnakeCrashedToZombie(snake)) {
             return true;
         }
-        for (Map.Entry<Player, Snake> playerWithSnake : this.playersWithSnakes.entrySet()) {
+        for (Map.Entry<Player, Snake> playerWithSnake : playersWithSnakes.entrySet()) {
             Snake otherSnake = playerWithSnake.getValue();
             if (checkCrashIntoYourself(snake)) {
                 return true;
@@ -276,7 +271,7 @@ public final class Game implements GameHandler {
     }
 
     private boolean isSnakeCrashedToZombie(Snake snake) {
-        return this.zombieSnakes.stream().anyMatch(zombieSnake -> zombieSnake != snake && zombieSnake.isSnake(snake.getHead()));
+        return zombieSnakes.stream().anyMatch(zombieSnake -> zombieSnake != snake && zombieSnake.isSnake(snake.getHead()));
     }
 
     private boolean checkCrashIntoYourself(Snake snake) {
@@ -284,18 +279,18 @@ public final class Game implements GameHandler {
     }
 
     private GameState generateGameState() {
-        int currentStateID = this.stateID++;
-        return new GameState(getFoodsAsPointsList(), new ArrayList<>(this.players), generateSnakeList(), this.config, currentStateID);
+        int currentStateID = stateID++;
+        return new GameState(getFoodsAsPointsList(), new ArrayList<>(players), generateSnakeList(), config, currentStateID);
     }
 
-    private List<Point2D> getFoodsAsPointsList() {
-        return this.foods.stream().map(Cell::getPoint).collect(Collectors.toList());
+    private List<Coord> getFoodsAsPointsList() {
+        return foods.stream().map(Cell::getPoint).collect(Collectors.toList());
     }
 
     private List<Snake> generateSnakeList() {
-        List<Snake> snakes = new ArrayList<>(this.playersWithSnakes.size() + this.zombieSnakes.size());
-        this.playersWithSnakes.forEach((player, snake) -> snakes.add(snake));
-        snakes.addAll(this.zombieSnakes);
+        List<Snake> snakes = new ArrayList<>(playersWithSnakes.size() + zombieSnakes.size());
+        playersWithSnakes.forEach((player, snake) -> snakes.add(snake));
+        snakes.addAll(zombieSnakes);
         return snakes;
     }
 }

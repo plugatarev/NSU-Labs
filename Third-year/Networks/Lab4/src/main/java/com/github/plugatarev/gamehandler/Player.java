@@ -2,6 +2,7 @@ package com.github.plugatarev.gamehandler;
 
 import com.github.plugatarev.SnakesProto.NodeRole;
 import com.github.plugatarev.datatransfer.NetNode;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -9,6 +10,7 @@ import lombok.Setter;
 import java.io.Serializable;
 import java.util.Objects;
 
+@AllArgsConstructor
 @RequiredArgsConstructor
 public final class Player implements Serializable {
     @Getter private final String name;
@@ -18,27 +20,27 @@ public final class Player implements Serializable {
     @Getter @Setter private int score = 0;
 
     public void incrementScore() {
-        this.score++;
+        score++;
     }
 
     @Override
     public String toString() {
-        return this.name;
+        return name;
     }
 
     @Override
     public boolean equals(Object object) {
-        if (this == object) {
+        if (object == this) {
             return true;
         }
         if (!(object instanceof Player other)) {
             return false;
         }
-        return name.equals(other.name);
+        return name.equals(other.name) && netNode.equals(other.netNode);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return Objects.hash(name, netNode);
     }
 }

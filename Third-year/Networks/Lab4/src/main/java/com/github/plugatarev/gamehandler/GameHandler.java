@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 public interface GameHandler {
-    Player registerNewPlayer(@NotNull String playerName, NetNode netNode);
+    Player registerNewPlayer(String playerName, NetNode netNode);
     void removePlayer(Player player);
     void moveAllSnakes(Map<Player, SnakesProto.Direction> playersMoves);
     Snake getSnakeByPlayer(Player player);

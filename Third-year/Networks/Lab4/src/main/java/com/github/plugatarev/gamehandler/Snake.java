@@ -18,16 +18,16 @@ public final class Snake implements Serializable {
     private final int fieldWidth;
     private final int fieldHeight;
 
-    @Getter private Point2D head;
-    @Getter private Point2D tail;
+    @Getter private Coord head;
+    @Getter private Coord tail;
 
     @Getter @Setter private int playerID = EMPTY;
     @Getter @Setter private SnakesProto.GameState.Snake.SnakeState state = SnakesProto.GameState.Snake.SnakeState.ALIVE;
     @Getter private Direction direction;
 
-    @Getter private final List<Point2D> points;
+    @Getter private final List<Coord> points;
 
-    public Snake(Point2D head, Point2D tail, int fieldWidth, int fieldHeight) {
+    public Snake(Coord head, Coord tail, int fieldWidth, int fieldHeight) {
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
         this.head = head;
@@ -40,7 +40,7 @@ public final class Snake implements Serializable {
         this.direction = calculateCurrentDirection(head, tail);
     }
 
-    public Snake(int playerID, List<Point2D> points, SnakesProto.GameState.Snake.SnakeState state, Direction direction, int fieldWidth, int fieldHeight) {
+    public Snake(int playerID, List<Coord> points, SnakesProto.GameState.Snake.SnakeState state, Direction direction, int fieldWidth, int fieldHeight) {
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
         this.playerID = playerID;
@@ -51,13 +51,13 @@ public final class Snake implements Serializable {
         this.tail = this.points.get(this.points.size() - 1);
     }
 
-    private void validateInitHeadAndTail(Point2D head, Point2D tail) {
+    private void validateInitHeadAndTail(Coord head, Coord tail) {
         if (!PointUtils.arePointsStraightConnected(head, tail, fieldWidth, fieldHeight)) {
             throw new IllegalArgumentException("Head and tail are not connected");
         }
     }
 
-    private Direction calculateCurrentDirection(Point2D head, Point2D tail) {
+    private Direction calculateCurrentDirection(Coord head, Coord tail) {
         validateInitHeadAndTail(head, tail);
         if (PointUtils.getPointToRight(head, fieldWidth).equals(tail)) {
             return Direction.LEFT;
@@ -89,7 +89,7 @@ public final class Snake implements Serializable {
         points.add(0, head);
     }
 
-    private Point2D getNewHead(Direction direction) {
+    private Coord getNewHead(Direction direction) {
         return switch (direction) {
             case DOWN -> PointUtils.getPointBelow(head, fieldHeight);
             case UP -> PointUtils.getPointAbove(head, fieldHeight);
@@ -110,7 +110,7 @@ public final class Snake implements Serializable {
         tail = points.get(points.size() - 1);
     }
 
-    public boolean isSnakeBody(Point2D point) {
+    public boolean isSnakeBody(Coord point) {
         for (int i = 1; i < points.size() - 1; i++) {
             if (point.equals(points.get(i))) {
                 return true;
@@ -119,11 +119,11 @@ public final class Snake implements Serializable {
         return false;
     }
 
-    public boolean isSnake(Point2D point) {
+    public boolean isSnake(Coord point) {
         return point.equals(head) || point.equals(tail) || isSnakeBody(point);
     }
 
-    public boolean isSnakeHead(Point2D point) {
+    public boolean isSnakeHead(Coord point) {
         return point.equals(head);
     }
 

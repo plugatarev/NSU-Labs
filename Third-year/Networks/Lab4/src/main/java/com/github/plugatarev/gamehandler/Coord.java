@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.Objects;
 
 @RequiredArgsConstructor
-public final class Point2D implements Serializable {
+public final class Coord implements Serializable {
     @Getter private final int x;
     @Getter private final int y;
 
@@ -16,7 +16,7 @@ public final class Point2D implements Serializable {
         if (this == object) {
             return true;
         }
-        if (!(object instanceof Point2D other)){
+        if (!(object instanceof Coord other)){
             return false;
         }
         return (x == other.x) && (y == other.y);

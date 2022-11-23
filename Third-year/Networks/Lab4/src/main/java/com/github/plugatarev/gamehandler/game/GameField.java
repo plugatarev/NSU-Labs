@@ -1,9 +1,8 @@
 package com.github.plugatarev.gamehandler.game;
 
 import lombok.Getter;
-import com.github.plugatarev.gamehandler.Point2D;
+import com.github.plugatarev.gamehandler.Coord;
 
-import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -19,7 +18,6 @@ public final class GameField {
     private final Random random = new Random();
 
     public GameField(int width, int height) {
-        //TODO: validateFieldSizes(width, height);
         field = new ArrayList<>(width * height);
         emptyCells = new ArrayList<>(width * height);
         for (int row = 0; row < height; row++){
@@ -32,17 +30,6 @@ public final class GameField {
         this.width = width;
         this.height = height;
     }
-//TODO:
-//    private void validateFieldSizes(int width, int height){
-//        if (width < ConfigValidator.MIN_FIELD_WIDTH || width > ConfigValidator.MAX_FIELD_WIDTH){
-//            throw new IllegalArgumentException("Width not from valid interval: ["
-//                    + ConfigValidator.MIN_FIELD_WIDTH + ", " + ConfigValidator.MAX_FIELD_WIDTH + "]");
-//        }
-//        if (height < ConfigValidator.MIN_FIELD_HEIGHT || height > ConfigValidator.MAX_FIELD_HEIGHT){
-//            throw new IllegalArgumentException("Height not from valid interval: ["
-//                    + ConfigValidator.MIN_FIELD_HEIGHT + ", " + ConfigValidator.MAX_FIELD_HEIGHT + "]");
-//        }
-//    }
 
     public Cell get(int row, int col){
         return new Cell(getCell(row, col));
@@ -67,9 +54,9 @@ public final class GameField {
         cell.setType(type);
     }
 
-    public void set(@NotNull Point2D point, @NotNull CellType type) {
+    public void set(Coord point, CellType type) {
         //TODO: mb delete?
-        Objects.requireNonNull(point, "Point2D cant be null");
+//        Objects.requireNonNull(point, "Point2D cant be null");
         set(point.getY(), point.getX(), type);
     }
 

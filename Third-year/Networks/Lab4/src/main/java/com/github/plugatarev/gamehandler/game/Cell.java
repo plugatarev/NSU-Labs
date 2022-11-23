@@ -2,20 +2,20 @@ package com.github.plugatarev.gamehandler.game;
 
 import lombok.Getter;
 import lombok.Setter;
-import com.github.plugatarev.gamehandler.Point2D;
+import com.github.plugatarev.gamehandler.Coord;
 
 import java.util.Objects;
 
 public final class Cell {
-    @Getter private final Point2D point;
+    @Getter private final Coord point;
     @Getter @Setter private CellType type;
 
     public Cell(int x, int y, CellType type) {
-        this.point = new Point2D(x, y);
+        this.point = new Coord(x, y);
         this.type = type;
     }
 
-    public Cell(Point2D point, CellType type) {
+    public Cell(Coord point, CellType type) {
         this.point = point;
         this.type = type;
     }
