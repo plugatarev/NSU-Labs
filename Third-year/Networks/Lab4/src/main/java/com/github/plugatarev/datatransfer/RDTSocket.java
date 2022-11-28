@@ -14,7 +14,7 @@ public interface RDTSocket {
     InetAddress getAddress();
     void removePendingMessage(long messageSequence);
 
-    int getLocalPort();
+    int getPort();
 
     void start();
     void stop();

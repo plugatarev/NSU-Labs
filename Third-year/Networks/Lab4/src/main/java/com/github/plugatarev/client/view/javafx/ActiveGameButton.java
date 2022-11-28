@@ -10,33 +10,30 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import lombok.Getter;
+import lombok.Setter;
 
-import javax.validation.constraints.NotNull;
 import java.util.Objects;
 
 public final class ActiveGameButton {
     @Getter private final String gameName;
-    @Getter private final NetNode masterNode;
-    @Getter private final int playersNumber;
+    @Setter @Getter private NetNode masterNode;
+    @Getter private final int playersCount;
 
     @Getter private final GameConfig config;
-//    private final boolean canJoin;
 
     @Getter private final String fieldSize;
     @Getter private final String foodNumber;
 
     @Getter private final Button button;
 
-    public ActiveGameButton(@NotNull GameInfo gameInfo) {
-        Objects.requireNonNull(gameInfo); //TODO: mb delete it?
+    public ActiveGameButton(GameInfo gameInfo) {
         gameName = gameInfo.getGameName();
-        playersNumber = gameInfo.getPlayers().size();
+        playersCount = gameInfo.getPlayers().size();
         config = gameInfo.getConfig();
         masterNode = gameInfo.getMasterNode();
-//        canJoin = gameInfo.isCanJoin();
         button = new Button("Вход");
         fieldSize = config.getHeight() + "x" + config.getWidth();
-        foodNumber = config.getFoodStatic() + ": x" + config.getFoodStatic();
+        foodNumber = config.getFoodStatic() + "+" + playersCount;
         designButton();
     }
 

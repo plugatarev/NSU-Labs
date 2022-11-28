@@ -2,11 +2,8 @@ package com.github.plugatarev.messages.messages;
 
 import com.github.plugatarev.SnakesProto.GameMessage;
 import com.github.plugatarev.gamehandler.GameState;
-import com.github.plugatarev.gamehandler.Player;
 import lombok.Getter;
 import com.github.plugatarev.utils.StateUtils;
-
-import java.util.List;
 
 public final class StateMessage extends Message {
     @Getter private final GameState gameState;

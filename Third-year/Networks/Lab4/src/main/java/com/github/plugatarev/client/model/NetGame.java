@@ -17,27 +17,21 @@ import com.github.plugatarev.server.ServerGame;
 import com.github.plugatarev.server.ServerHandler;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.apache.log4j.Logger;
 import com.github.plugatarev.client.view.View;
 import com.github.plugatarev.utils.StateUtils;
 
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 @RequiredArgsConstructor
-public final class Game implements GameHandler {
-    private static final Logger logger = Logger.getLogger(Game.class);
+public final class NetGame implements NetGameHandler {
+    private static final Logger logger = Logger.getLogger(NetGame.class);
     private static final int EMPTY = -1;
 
     private final RDTSocket rdtSocket;
@@ -48,31 +42,26 @@ public final class Game implements GameHandler {
     private final InetSocketAddress multicastInfo;
     private final NetworkInterface networkInterface;
 
-    @Setter private NetNode serverNetNode;
-
-    private ServerHandler activeServerGame = null;
+    private ServerHandler activeServerGame;
     private GameState gameState;
     private NodeRole nodeRole;
     private NetNode master;
     private NetNode deputy;
-    private Instant masterLastSeen = Instant.now();
+    private Instant masterLastSeen;
 
     private int masterID = EMPTY;
     private int deputyID = EMPTY;
     private int playerID = EMPTY;
 
     private final AtomicLong msgSeq = new AtomicLong(0);
-//    private final ExecutorService executorService = Executors.newFixedThreadPool(2);
     private final MessageHandler messageHandler = createMessageHandler();
-//    private Future<?> activeJoinTask = null;
     private Timer timer = new Timer();
 
     private long currentSteerMessageSeq = EMPTY;
     private Direction curDirection = null;
     private Thread receiveThread = null;
-    private boolean anyGamesOnLocalhost = false;
 
-    public Game(GameConfig config, String playerName, View view, InetSocketAddress multicastInfo, NetworkInterface networkInterface) throws IOException {
+    public NetGame(GameConfig config, String playerName, View view, InetSocketAddress multicastInfo, NetworkInterface networkInterface) throws IOException {
         int pingDelay = config.getStateDelayMs() / 10;
         this.rdtSocket = new GameSocket(networkInterface, pingDelay);
         this.config = config;
@@ -85,16 +74,11 @@ public final class Game implements GameHandler {
 
     @Override
     public void startNewGame() {
-        if (anyGamesOnLocalhost) {
-            logger.info("You have a server running on localhost. Shut it down and try again.");
-            return;
-        }
-
         stopCurrentServerGame();
         rdtSocket.stop();
         rdtSocket.start();
         try {
-            activeServerGame = new ServerGame(config, multicastInfo, rdtSocket.getAddress(), rdtSocket.getLocalPort(), playerName, networkInterface, gameName);
+            activeServerGame = new ServerGame(config, multicastInfo, rdtSocket.getAddress(), rdtSocket.getPort(), playerName, networkInterface, gameName);
             master = new NetNode(rdtSocket.getAddress(), activeServerGame.getPort());
             masterLastSeen = Instant.now();
             gameState = null;
@@ -112,11 +96,6 @@ public final class Game implements GameHandler {
     public void joinGame(NetNode gameOwner, String playerName) {
         exit();
         rdtSocket.start();
-//        if (activeJoinTask != null) {
-//            activeJoinTask.cancel(true);
-//        }
-//        activeJoinTask = executorService.submit(() -> {
-            //TODO:
             Message response = rdtSocket.send(new JoinMessage(SnakesProto.PlayerType.HUMAN, playerName, gameName, NodeRole.NORMAL, msgSeq.get()), gameOwner);
             if (response == null) return;
 
@@ -125,7 +104,7 @@ public final class Game implements GameHandler {
                 return;
             }
             if (!response.getType().equals(MessageType.ACK)) {
-                logger.error("For join message, Server didn't respond with Ack message");
+                logger.error("for join message server didn't respond Ack message");
                 return;
             }
 
@@ -138,7 +117,6 @@ public final class Game implements GameHandler {
             changeNodeRole(NodeRole.NORMAL);
 
             startTimerTasks();
-//        });
     }
 
     @Override
@@ -151,7 +129,7 @@ public final class Game implements GameHandler {
 
     @Override
     public void handleMove(Direction direction) {
-        if (!NodeRole.VIEWER.equals(nodeRole)) {
+        if (!nodeRole.equals(NodeRole.VIEWER)) {
             rdtSocket.removePendingMessage(currentSteerMessageSeq);
             currentSteerMessageSeq = msgSeq.getAndIncrement();
             curDirection = direction;
@@ -174,18 +152,15 @@ public final class Game implements GameHandler {
             receiveThread.interrupt();
             receiveThread = null;
         }
-        stopCurrentServerGame();
     }
 
     @Override
     public void updateActiveGames(Set<GameInfo> gameInfos) {
         for (GameInfo game : gameInfos) {
             if (game.getMasterNode().getAddress().equals(rdtSocket.getAddress())) {
-                anyGamesOnLocalhost = true;
                 return;
             }
         }
-        anyGamesOnLocalhost = false;
     }
 
     private void stopCurrentServerGame() {
@@ -236,7 +211,7 @@ public final class Game implements GameHandler {
     }
 
     private void startMasterCheck() {
-        int delay = (int) (config.getStateDelayMs() * 0.8);
+        int period = (int) (config.getStateDelayMs() * 0.8);
         timer.schedule(
                 new TimerTask() {
                     @Override
@@ -247,8 +222,8 @@ public final class Game implements GameHandler {
                             }
                             else if (nodeRole == NodeRole.NORMAL) {
                                 master = deputy;
-                                deputy = null;
                                 masterID = deputyID;
+                                deputy = null;
                                 deputyID = EMPTY;
                                 masterLastSeen = Instant.now();
                             }
@@ -258,8 +233,7 @@ public final class Game implements GameHandler {
                         }
                     }
                 },
-                0,
-                delay
+                0, period
         );
     }
 
@@ -339,11 +313,6 @@ public final class Game implements GameHandler {
 
             @Override
             public void handle(NetNode sender, StateMessage stateMsg) {
-                if (master != null && !sender.equals(master)) {
-                    logger.info("Received state from somewhere else: " + "MASTER=" + master + ", SENDER=" + sender);
-                    return;
-                }
-
                 GameState newState = stateMsg.getGameState();
                 if (gameState != null && gameState.getStateID() >= newState.getStateID()) {
                     logger.warn("Received state with id=" + newState.getStateID() + " less then last gamehandler state id=" + gameState.getStateID());
@@ -362,7 +331,6 @@ public final class Game implements GameHandler {
                     deputyID = deputyPlayer.getId();
                 }
                 gameState = newState;
-                view.setMyPlayer(new NetNode(rdtSocket.getAddress(), rdtSocket.getLocalPort()));
                 view.updateCurrentGame(newState);
             }
 
@@ -375,7 +343,7 @@ public final class Game implements GameHandler {
             public void handle(NetNode sender, RoleChangeMessage roleChangeMsg) {
                 switch (nodeRole) {
                     case DEPUTY -> {
-                        if (roleChangeMsg.getSenderRole() == NodeRole.MASTER && roleChangeMsg.getReceiverRole() == NodeRole.MASTER) {
+                        if (roleChangeMsg.getSenderRole().equals(NodeRole.MASTER) && roleChangeMsg.getReceiverRole().equals(NodeRole.MASTER)) {
                             swapToMaster();
                             deputy = null;
                         }

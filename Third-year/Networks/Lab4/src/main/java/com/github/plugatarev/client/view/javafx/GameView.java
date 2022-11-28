@@ -6,7 +6,6 @@ import com.github.plugatarev.SnakesProto.Direction;
 import com.github.plugatarev.client.controller.GameController;
 import com.github.plugatarev.client.controller.events.*;
 import com.github.plugatarev.client.view.View;
-import com.github.plugatarev.datatransfer.GameSocket;
 import com.github.plugatarev.datatransfer.NetNode;
 import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
@@ -30,17 +29,9 @@ import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import org.apache.log4j.Logger;
 
-import javax.validation.constraints.NotNull;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public final class GameView implements View {
     private static final Logger logger = Logger.getLogger(GameView.class);
@@ -72,7 +63,6 @@ public final class GameView implements View {
     private final Set<ActiveGameButton> activeGameButtons = new HashSet<>();
     private final PlayerColorMapper colorMapper = new PlayerColorMapper();
 
-    private NetNode myPlayer = null;
     private Rectangle[][] fieldCells;
     private Stage stage;
     private GameConfig gameConfig;
@@ -91,7 +81,7 @@ public final class GameView implements View {
         this.stage.setOnCloseRequest(event -> close(true));
         this.stage.addEventHandler(KeyEvent.KEY_RELEASED, event -> {
             if (gameController == null) {
-                throw new IllegalStateException("Cant move with undefined controller");
+                throw new IllegalStateException("Can't move with undefined controller");
             }
             getDirectionByKeyCode(event.getCode()).ifPresent(direction -> gameController.event(new MoveEvent(direction)));
         });
@@ -134,11 +124,6 @@ public final class GameView implements View {
         gameInfoObservableList.setAll(activeGameButtons);
     }
 
-    @Override
-    public void setMyPlayer(NetNode self) {
-        myPlayer = self;
-    }
-
     private void initPlayersInfoTable() {
         playersRankingTable.setItems(playersObservableList);
         playerNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -149,7 +134,7 @@ public final class GameView implements View {
         gameListTable.setItems(gameInfoObservableList);
         gameNameColumn.setCellValueFactory(new PropertyValueFactory<>("gameName"));
         foodColumn.setCellValueFactory(new PropertyValueFactory<>("foodNumber"));
-        playersNumberColumn.setCellValueFactory(new PropertyValueFactory<>("playersNumber"));
+        playersNumberColumn.setCellValueFactory(new PropertyValueFactory<>("playersCount"));
         fieldSizeColumn.setCellValueFactory(new PropertyValueFactory<>("fieldSize"));
         connectButtonColumn.setCellValueFactory(new PropertyValueFactory<>("button"));
     }
@@ -158,8 +143,8 @@ public final class GameView implements View {
         exitButton.setOnAction(event -> close(false));
         newGameButton.setOnAction(event -> gameController.event(new NewGameEvent()));
 
-        serverName.setOnAction(event -> serverIPName = event.toString());
-        serverPort.setOnAction(event -> serverPortName = event.toString());
+        serverName.setOnAction(event -> serverIPName = serverName.getText());
+        serverPort.setOnAction(event -> serverPortName = serverPort.getText());
 
         serverPlayer.setOnAction(event -> {
                 try {
@@ -203,7 +188,7 @@ public final class GameView implements View {
         }
     }
 
-    private Optional<Direction> getDirectionByKeyCode(@NotNull KeyCode code) {
+    private Optional<Direction> getDirectionByKeyCode(KeyCode code) {
         return switch (code) {
             case UP, W -> Optional.of(Direction.UP);
             case DOWN, S -> Optional.of(Direction.DOWN);
@@ -221,16 +206,16 @@ public final class GameView implements View {
             }
         }
         snakes.forEach((snake, color) ->
-                snake.getPoints().forEach(point -> {
+                snake.getCoordinates().forEach(point -> {
                     Color pointColor = snake.isSnakeHead(point) ?
                             ((color.darker().equals(color)) ?
                                     color.brighter() :
                                     color.darker()) :
                             color;
-                    fieldCells[point.getY()][point.getX()].setFill(pointColor);
+                    fieldCells[point.y()][point.x()].setFill(pointColor);
                 })
         );
-        state.getFoods().forEach(fruit -> fieldCells[fruit.getY()][fruit.getX()].setFill(FOOD_COLOR));
+        state.getFoods().forEach(fruit -> fieldCells[fruit.y()][fruit.x()].setFill(FOOD_COLOR));
     }
 
     private void buildField() {
@@ -260,8 +245,7 @@ public final class GameView implements View {
                 continue;
             }
             Color playerColor = colorMapper.getColor(
-                        Optional.ofNullable(PlayerUtils.findPlayerBySnake(snake, state.getActivePlayers())).orElseThrow(),
-                        myPlayer
+                        Optional.ofNullable(PlayerUtils.findPlayerBySnake(snake, state.getActivePlayers())).orElseThrow()
                     ).orElseThrow(() -> new NoSuchElementException("Color map doesn't contain player"));
             snakes.put(snake, playerColor);
         }

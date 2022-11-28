@@ -4,19 +4,17 @@ import lombok.Getter;
 import lombok.Setter;
 import com.github.plugatarev.gamehandler.Coord;
 
-import java.util.Objects;
-
 public final class Cell {
-    @Getter private final Coord point;
+    @Getter private final Coord coord;
     @Getter @Setter private CellType type;
 
     public Cell(int x, int y, CellType type) {
-        this.point = new Coord(x, y);
+        this.coord = new Coord(x, y);
         this.type = type;
     }
 
-    public Cell(Coord point, CellType type) {
-        this.point = point;
+    public Cell(Coord coord, CellType type) {
+        this.coord = coord;
         this.type = type;
     }
 
@@ -25,30 +23,14 @@ public final class Cell {
     }
 
     public Cell(Cell cell) {
-        this(cell.point, cell.getType());
+        this(cell.coord, cell.getType());
     }
 
     public int getX() {
-        return point.getX();
+        return coord.x();
     }
 
     public int getY() {
-        return point.getY();
-    }
-
-    @Override
-    public boolean equals(Object object) {
-        if (this == object) {
-            return true;
-        }
-        if (!(object instanceof Cell other)) {
-            return false;
-        }
-        return point.equals(other.point) && (type == other.type);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(point, type);
+        return coord.y();
     }
 }

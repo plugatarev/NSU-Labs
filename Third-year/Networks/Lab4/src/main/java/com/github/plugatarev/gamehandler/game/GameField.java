@@ -5,7 +5,6 @@ import com.github.plugatarev.gamehandler.Coord;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Random;
 
@@ -15,7 +14,7 @@ public final class GameField {
     @Getter private final int width;
     @Getter private final int height;
 
-    private final Random random = new Random();
+    private static final Random random = new Random();
 
     public GameField(int width, int height) {
         field = new ArrayList<>(width * height);
@@ -55,12 +54,10 @@ public final class GameField {
     }
 
     public void set(Coord point, CellType type) {
-        //TODO: mb delete?
-//        Objects.requireNonNull(point, "Point2D cant be null");
-        set(point.getY(), point.getX(), type);
+        set(point.y(), point.x(), type);
     }
 
-    public int getEmptyCellsNumber() {
+    public int getEmptyCellsCount() {
         return emptyCells.size();
     }
 

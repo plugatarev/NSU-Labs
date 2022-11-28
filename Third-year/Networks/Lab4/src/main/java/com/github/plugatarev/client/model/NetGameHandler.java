@@ -6,7 +6,7 @@ import com.github.plugatarev.multicastreceiver.GameInfo;
 
 import java.util.Set;
 
-public interface GameHandler {
+public interface NetGameHandler {
     void startNewGame();
     void joinGame(NetNode gameOwner, String playerName);
     void joinServerPlayer(NetNode serverNetNode);

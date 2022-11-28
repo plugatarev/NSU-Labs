@@ -20,9 +20,9 @@ public final class SnakeUtils {
         builder.setState(snake.getState());
         builder.setHeadDirection(snake.getDirection());
         GameState.Coord.Builder cordBuilder = GameState.Coord.newBuilder();
-        for (Coord point: snake.getPoints()) {
-            cordBuilder.setX(point.getX());
-            cordBuilder.setY(point.getY());
+        for (Coord point: snake.getCoordinates()) {
+            cordBuilder.setX(point.x());
+            cordBuilder.setY(point.y());
             builder.addPoints(cordBuilder.build());
         }
         return builder.build();
@@ -36,7 +36,7 @@ public final class SnakeUtils {
                     }
                     return new Snake(
                             snake.getPlayerId(),
-                            PointUtils.getPointList(snake.getPointsList()),
+                            CoordUtils.getCoordList(snake.getPointsList()),
                             snake.getState(),
                             snake.getHeadDirection(),
                             config.getWidth(),

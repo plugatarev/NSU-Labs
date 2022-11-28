@@ -3,7 +3,6 @@ package com.github.plugatarev.gamehandler;
 import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.datatransfer.NetNode;
 
-import javax.validation.constraints.NotNull;
 import java.util.Map;
 
 public interface GameHandler {

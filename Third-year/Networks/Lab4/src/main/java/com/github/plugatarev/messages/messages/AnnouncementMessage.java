@@ -3,10 +3,8 @@ package com.github.plugatarev.messages.messages;
 import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.GameAnnouncement;
 import com.github.plugatarev.SnakesProto.GameConfig;
-import com.github.plugatarev.SnakesProto.GamePlayers;
 import com.github.plugatarev.SnakesProto.GameMessage;
 import com.github.plugatarev.gamehandler.Player;
-import lombok.AccessLevel;
 import lombok.Getter;
 import com.github.plugatarev.utils.PlayerUtils;
 
@@ -25,7 +23,7 @@ public final class AnnouncementMessage extends Message {
 
     public AnnouncementMessage(long messageSequence) {
         super(MessageType.ANNOUNCEMENT, messageSequence, EMPTY, EMPTY);
-        this.games = new ArrayList<>();
+        games = new ArrayList<>();
     }
 
     public void addGame(List<Player> players, GameConfig config, String gameName, boolean canJoin) {

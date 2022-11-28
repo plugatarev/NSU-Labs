@@ -4,9 +4,6 @@ import org.apache.log4j.Logger;
 
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Scanner;
 
 public final class Main {
@@ -31,10 +28,12 @@ public final class Main {
     }
 
     private static NetworkInterface getNetworkInterface() throws SocketException {
-        List<NetworkInterface> networkInterfaces = NetworkInterface.networkInterfaces().filter(netInterface -> {
+        var networkInterfaces = NetworkInterface.networkInterfaces().filter(netInterface -> {
             try {
                 return netInterface.isUp() && !netInterface.isLoopback();
-            } catch (SocketException ignored) {}
+            }
+            catch (SocketException ignored) {
+            }
             return false;
         }).toList();
 
@@ -42,6 +41,28 @@ public final class Main {
             logger.info("You don't have any working network interfaces.");
             return null;
         }
-        return networkInterfaces.get(0);
+
+        if (networkInterfaces.size() == 1) {
+            return networkInterfaces.get(0);
+        }
+
+        System.out.println("Choose network interface");
+        for (int i = 0; i < networkInterfaces.size(); i++) {
+            System.out.println(i + ": " + networkInterfaces.get(i).toString());
+        }
+
+        System.out.print("Your input: ");
+        int selected;
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            selected = scanner.nextInt();
+            if (selected < 0 || selected > networkInterfaces.size()) {
+                System.out.println("Wrong number. Choose again: ");
+                continue;
+            }
+            break;
+        }
+
+        return networkInterfaces.get(selected);
     }
 }

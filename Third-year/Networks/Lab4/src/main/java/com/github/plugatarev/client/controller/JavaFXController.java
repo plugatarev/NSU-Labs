@@ -6,37 +6,37 @@ import com.github.plugatarev.client.controller.events.ServerPlayerEvent;
 import com.github.plugatarev.client.controller.events.UserEvent;
 import lombok.RequiredArgsConstructor;
 import com.github.plugatarev.client.view.View;
-import com.github.plugatarev.client.model.GameHandler;
+import com.github.plugatarev.client.model.NetGameHandler;
 import com.github.plugatarev.client.controller.events.JoinGameEvent;
 
 @RequiredArgsConstructor
 public final class JavaFXController implements GameController {
-    private final GameConfig playerConfig;
+    private final GameConfig config;
     private final String playerName;
-    private final GameHandler gameNetwork;
+    private final NetGameHandler netGameHandler;
     private final View view;
 
     @Override
     public void event(UserEvent userEvent) {
         switch (userEvent.getType()) {
             case NEW_GAME -> {
-                view.setConfig(playerConfig);
-                gameNetwork.startNewGame();
+                view.setConfig(config);
+                netGameHandler.startNewGame();
             }
             case JOIN_GAME -> {
                 JoinGameEvent joinEvent = (JoinGameEvent) userEvent;
                 view.setConfig(joinEvent.getConfig());
-                gameNetwork.joinGame(joinEvent.getNode(), playerName);
+                netGameHandler.joinGame(joinEvent.getNode(), playerName);
             }
             case MOVE -> {
                 MoveEvent moveEvent = (MoveEvent) userEvent;
-                gameNetwork.handleMove(moveEvent.getDirection());
+                netGameHandler.handleMove(moveEvent.getDirection());
             }
             case SERVER_PLAYER -> {
                 ServerPlayerEvent serverPlayerEvent = (ServerPlayerEvent) userEvent;
-                gameNetwork.joinServerPlayer(serverPlayerEvent.getServerNetNode());
+                netGameHandler.joinServerPlayer(serverPlayerEvent.getServerNetNode());
             }
-            case EXIT -> gameNetwork.exit();
+            case EXIT -> netGameHandler.exit();
         }
     }
 }

@@ -19,7 +19,7 @@ public final class StateUtils {
             return null;
         }
         return new GameState(
-                PointUtils.getPointList(state.getFoodsList()),
+                CoordUtils.getCoordList(state.getFoodsList()),
                 PlayerUtils.getPlayerList(state.getPlayers().getPlayersList()),
                 SnakeUtils.getSnakeList(state.getSnakesList(), ConfigProperty.getConfig()),
                 ConfigProperty.getConfig(),
@@ -39,8 +39,8 @@ public final class StateUtils {
         }
         var coordBuilder = SnakesProto.GameState.Coord.newBuilder();
         for (Coord fruit: state.getFoods()) {
-            coordBuilder.setX(fruit.getX());
-            coordBuilder.setY(fruit.getY());
+            coordBuilder.setX(fruit.x());
+            coordBuilder.setY(fruit.y());
             builder.addFoods(coordBuilder.build());
         }
         var playersBuilder = SnakesProto.GamePlayers.newBuilder();
@@ -53,16 +53,16 @@ public final class StateUtils {
 
     public static String getMasterNameFromState(GameState state) {
         for (Player player: state.getActivePlayers()) {
-            if (SnakesProto.NodeRole.MASTER.equals(player.getRole())) {
+            if (player.getRole().equals(SnakesProto.NodeRole.MASTER)) {
                 return player.getName();
             }
         }
-        return "";
+        return null;
     }
 
     public static Player getDeputyFromState(GameState state) {
         for (Player player: state.getActivePlayers()) {
-            if (SnakesProto.NodeRole.DEPUTY.equals(player.getRole())) {
+            if (player.getRole().equals(SnakesProto.NodeRole.DEPUTY)) {
                 return player;
             }
         }

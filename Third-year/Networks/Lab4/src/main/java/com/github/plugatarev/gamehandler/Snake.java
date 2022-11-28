@@ -5,7 +5,7 @@ import com.github.plugatarev.SnakesProto.Direction;
 import lombok.Getter;
 import lombok.Setter;
 import com.github.plugatarev.utils.DirectionUtils;
-import com.github.plugatarev.utils.PointUtils;
+import com.github.plugatarev.utils.CoordUtils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -25,7 +25,7 @@ public final class Snake implements Serializable {
     @Getter @Setter private SnakesProto.GameState.Snake.SnakeState state = SnakesProto.GameState.Snake.SnakeState.ALIVE;
     @Getter private Direction direction;
 
-    @Getter private final List<Coord> points;
+    @Getter private final List<Coord> coordinates;
 
     public Snake(Coord head, Coord tail, int fieldWidth, int fieldHeight) {
         this.fieldWidth = fieldWidth;
@@ -33,42 +33,41 @@ public final class Snake implements Serializable {
         this.head = head;
         this.tail = tail;
         validateInitHeadAndTail(head, tail);
-        this.points = new ArrayList<>();
-        this.points.add(head);
-        this.points.add(tail);
-
-        this.direction = calculateCurrentDirection(head, tail);
+        this.coordinates = new ArrayList<>();
+        this.coordinates.add(head);
+        this.coordinates.add(tail);
+        this.direction = getCurrentDirection(head, tail);
     }
 
-    public Snake(int playerID, List<Coord> points, SnakesProto.GameState.Snake.SnakeState state, Direction direction, int fieldWidth, int fieldHeight) {
+    public Snake(int playerID, List<Coord> coordinates, SnakesProto.GameState.Snake.SnakeState state, Direction direction, int fieldWidth, int fieldHeight) {
         this.fieldWidth = fieldWidth;
         this.fieldHeight = fieldHeight;
         this.playerID = playerID;
-        this.points = new ArrayList<>(points);
+        this.coordinates = new ArrayList<>(coordinates);
         this.state = state;
         this.direction = direction;
-        this.head = this.points.get(0);
-        this.tail = this.points.get(this.points.size() - 1);
+        this.head = this.coordinates.get(0);
+        this.tail = this.coordinates.get(this.coordinates.size() - 1);
     }
 
     private void validateInitHeadAndTail(Coord head, Coord tail) {
-        if (!PointUtils.arePointsStraightConnected(head, tail, fieldWidth, fieldHeight)) {
+        if (!CoordUtils.areCoordsConnected(head, tail, fieldWidth, fieldHeight)) {
             throw new IllegalArgumentException("Head and tail are not connected");
         }
     }
 
-    private Direction calculateCurrentDirection(Coord head, Coord tail) {
+    private Direction getCurrentDirection(Coord head, Coord tail) {
         validateInitHeadAndTail(head, tail);
-        if (PointUtils.getPointToRight(head, fieldWidth).equals(tail)) {
+        if (CoordUtils.getCoordToRight(head, fieldWidth).equals(tail)) {
             return Direction.LEFT;
         }
-        else if (PointUtils.getPointToLeft(head, fieldWidth).equals(tail)) {
+        else if (CoordUtils.getCoordToLeft(head, fieldWidth).equals(tail)) {
             return Direction.RIGHT;
         }
-        else if (PointUtils.getPointBelow(head, fieldHeight).equals(tail)) {
+        else if (CoordUtils.getCoordBelow(head, fieldHeight).equals(tail)) {
             return Direction.UP;
         }
-        else if (PointUtils.getPointAbove(head, fieldHeight).equals(tail)) {
+        else if (CoordUtils.getCoordAbove(head, fieldHeight).equals(tail)) {
             return Direction.DOWN;
         }
         throw new IllegalStateException("Cant calculate current direction");
@@ -85,16 +84,16 @@ public final class Snake implements Serializable {
         }
 
         this.direction = direction;
-        head = getNewHead(direction);
-        points.add(0, head);
+        head = getNewHeadCoord(direction);
+        coordinates.add(0, head);
     }
 
-    private Coord getNewHead(Direction direction) {
+    private Coord getNewHeadCoord(Direction direction) {
         return switch (direction) {
-            case DOWN -> PointUtils.getPointBelow(head, fieldHeight);
-            case UP -> PointUtils.getPointAbove(head, fieldHeight);
-            case LEFT -> PointUtils.getPointToLeft(head, fieldWidth);
-            case RIGHT -> PointUtils.getPointToRight(head, fieldWidth);
+            case DOWN -> CoordUtils.getCoordBelow(head, fieldHeight);
+            case UP -> CoordUtils.getCoordAbove(head, fieldHeight);
+            case LEFT -> CoordUtils.getCoordToLeft(head, fieldWidth);
+            case RIGHT -> CoordUtils.getCoordToRight(head, fieldWidth);
         };
     }
 
@@ -103,16 +102,16 @@ public final class Snake implements Serializable {
     }
 
     public void removeTail() {
-        points.remove(tail);
-        if (points.size() <= 1) {
+        coordinates.remove(tail);
+        if (coordinates.size() <= 1) {
             throw new IllegalStateException("Snake cant have less than 2 points");
         }
-        tail = points.get(points.size() - 1);
+        tail = coordinates.get(coordinates.size() - 1);
     }
 
     public boolean isSnakeBody(Coord point) {
-        for (int i = 1; i < points.size() - 1; i++) {
-            if (point.equals(points.get(i))) {
+        for (int i = 1; i < coordinates.size() - 1; i++) {
+            if (point.equals(coordinates.get(i))) {
                 return true;
             }
         }
@@ -135,11 +134,11 @@ public final class Snake implements Serializable {
         if (!(object instanceof Snake other)) {
             return false;
         }
-        return points.equals(other.points);
+        return coordinates.equals(other.coordinates);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.points);
+        return Objects.hash(this.coordinates);
     }
 }

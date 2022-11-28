@@ -64,7 +64,7 @@ public final class GameSocket implements RDTSocket {
     }
 
     @Override
-    public int getLocalPort() {
+    public int getPort() {
         return socket.getLocalPort();
     }
 

@@ -28,7 +28,7 @@ public final class Game implements GameHandler {
     private final Map<Player, Snake> playersForRemove = new HashMap<>();
     private final List<Snake> zombieSnakes = new ArrayList<>();
     private final List<Player> players = new ArrayList<>();
-    private final Random random = new Random();
+    private static final Random random = new Random();
 
     @Getter private final GameConfig config;
     private final GameField field;
@@ -44,17 +44,17 @@ public final class Game implements GameHandler {
         this.field = new GameField(this.config.getWidth(), this.config.getHeight());
         this.stateID = 0;
         this.foods = new ArrayList<>(this.config.getFoodStatic());
-        this.generateFoods();
+        generateFoods();
     }
 
     public Game(GameState state, ServerHandler serverHandler) {
-        this.config = state.getGameConfig();
         this.serverHandler = serverHandler;
-        this.field = new GameField(this.config.getWidth(), this.config.getHeight());
-        this.stateID = state.getStateID() + 1;
+        config = state.getGameConfig();
+        field = new GameField(config.getWidth(), config.getHeight());
+        stateID = state.getStateID() + 1;
 
         state.getSnakes().forEach(snake -> {
-            snake.getPoints().forEach(point -> field.set(point, CellType.SNAKE));
+            snake.getCoordinates().forEach(point -> field.set(point, CellType.SNAKE));
             switch (snake.getState()) {
                 case ZOMBIE -> zombieSnakes.add(snake);
                 case ALIVE -> {
@@ -84,20 +84,16 @@ public final class Game implements GameHandler {
         Player player = new Player(playerName, playerIDCounter, netNode);
         playerIDCounter++;
 
-        List<Cell> snakePoints = createNewSnake();
-        if (snakePoints.isEmpty()) {
+        List<Cell> snakeCoords = createNewSnake();
+        if (snakeCoords.isEmpty()) {
             throw new IllegalStateException("Cant add new player because no space on field");
         }
-
-        Snake playerSnake = new Snake(
-                snakePoints.get(0).getPoint(),
-                snakePoints.get(1).getPoint(),
-                this.field.getWidth(),
-                this.field.getHeight()
-        );
+        Coord head = snakeCoords.get(0).getCoord();
+        Coord tail = snakeCoords.get(1).getCoord();
+        Snake playerSnake = new Snake(head, tail, field.getWidth(), field.getHeight());
 
         playerSnake.setPlayerID(player.getId());
-        snakePoints.forEach(cell -> field.set(cell.getY(), cell.getX(), CellType.SNAKE));
+        snakeCoords.forEach(cell -> field.set(cell.getY(), cell.getX(), CellType.SNAKE));
 
         players.add(player);
         playersWithSnakes.put(player, playerSnake);
@@ -185,7 +181,7 @@ public final class Game implements GameHandler {
     }
 
     private void removeFood(Coord fruitForRemove) {
-        foods.removeIf(fruit -> fruitForRemove.equals(fruit.getPoint()));
+        foods.removeIf(fruit -> fruitForRemove.equals(fruit.getCoord()));
     }
 
     private void handlePlayerLose(Player player, Snake playerSnake) {
@@ -214,14 +210,14 @@ public final class Game implements GameHandler {
         int aliveSnakesCount = playersWithSnakes.size();
         int requiredFruitsNumber = config.getFoodStatic() + aliveSnakesCount;
         if (foods.size() == requiredFruitsNumber) return;
-        if (field.getEmptyCellsNumber() < requiredFruitsNumber) {
-            logger.debug("Can't generate required number of fruits=" + requiredFruitsNumber + ", empty cells number=" + field.getEmptyCellsNumber());
-            return;
+        if (field.getEmptyCellsCount() < requiredFruitsNumber) {
+            logger.debug("Can't generate required number of fruits=" + requiredFruitsNumber + ", empty cells number=" + field.getEmptyCellsCount());
+            requiredFruitsNumber = field.getEmptyCellsCount();
         }
 
         while (foods.size() < requiredFruitsNumber) {
             Cell randomEmptyCell = field.findRandomEmptyCell().orElseThrow(() -> new IllegalStateException("Can't find empty cell"));
-            field.set(randomEmptyCell.getPoint(), CellType.FOOD);
+            field.set(randomEmptyCell.getCoord(), CellType.FOOD);
             foods.add(randomEmptyCell);
         }
     }
@@ -235,17 +231,17 @@ public final class Game implements GameHandler {
 
     private boolean isSnakeAteFood(Snake snake) {
         Coord snakeHead = snake.getHead();
-        return foods.stream().anyMatch(fruit -> snakeHead.equals(fruit.getPoint()));
+        return foods.stream().anyMatch(fruit -> snakeHead.equals(fruit.getCoord()));
     }
 
     private void makeFoodsFromSnakeWithProbability(Snake snake) {
-        for (Coord p : snake.getPoints()) {
+        for (Coord p : snake.getCoordinates()) {
             if (p.equals(snake.getHead())) {
                 continue;
             }
             if (random.nextDouble() < PROBABILITY) {
                 field.set(p, CellType.FOOD);
-                foods.add(field.get(p.getY(), p.getX()));
+                foods.add(field.get(p.y(), p.x()));
             }
             else {
                 field.set(p, CellType.EMPTY);
@@ -284,7 +280,7 @@ public final class Game implements GameHandler {
     }
 
     private List<Coord> getFoodsAsPointsList() {
-        return foods.stream().map(Cell::getPoint).collect(Collectors.toList());
+        return foods.stream().map(Cell::getCoord).collect(Collectors.toList());
     }
 
     private List<Snake> generateSnakeList() {
