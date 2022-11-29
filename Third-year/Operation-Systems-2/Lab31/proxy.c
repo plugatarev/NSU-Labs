@@ -17,7 +17,7 @@
 #define NO_FLAGS 0
 #define MAX_CONNECTIONS 100
 #define MAX_CACHE_SIZE 1024
-#define BUFFER_SIZE (16 * 1024)
+#define BUFFER_SIZE (512 * 1024)
 #define MAX_CLIENTS_COUNT 20
 #define DECIMAL 10
 #define ERROR_CODE (char*)1
@@ -37,7 +37,6 @@ enum connectionStatus {
     READ_FROM_CLIENT,
     WRITE_TO_SERVER,
     READ_FROM_SERVER,
-    WRITE_TO_CLIENT,
     READ_FROM_CACHE_WRITE_CLIENT,
     NOT_ACTIVE
 };
@@ -89,14 +88,15 @@ void nonblock(int fd) {
     }
 }
 
+//url = "http://fit.ippolitov.me/CN_2/2021/2.html"
 char* createGet(char* url, size_t* len) {
-    char* afterProtocol = strstr(url, "://");
+    char* afterProtocol = strstr(url, "://"); //"afterProtocol = ://fit.ippolitov.me/CN_2/2021/2.html"
     if (afterProtocol == NULL) {
         fprintf(stderr, "Incorrect input.\n");
         return ERROR_CODE;
     }
 
-    char* afterHost = strchr(afterProtocol + 3, '/');
+    char* afterHost = strchr(afterProtocol + 3, '/'); //"/CN_2/2021/2.html"
     int hostLength = afterHost == NULL ? strlen(afterProtocol + 3) : afterHost - (afterProtocol + 3);
 
     char hostName[hostLength + 1];
@@ -110,7 +110,7 @@ char* createGet(char* url, size_t* len) {
         *len = sizeof(request) + sizeof(hostName) + 1;
         buffer = (char*) malloc(sizeof(char) * (*len));
         if (buffer == NULL) {
-            perror("malloc in createGet");
+            perror("malloc");
             return ERROR_CODE;
         }
         sprintf(buffer, request, "/", hostName);
@@ -119,7 +119,7 @@ char* createGet(char* url, size_t* len) {
         *len = strlen(request) - 4 + strlen(afterHost) + strlen(hostName);
         buffer = (char*) malloc(sizeof(char) * (*len));
         if (buffer == NULL) {
-            perror("malloc in createGet");
+            perror("malloc");
             return ERROR_CODE;
         }
         sprintf(buffer, request, afterHost, hostName);
@@ -165,14 +165,15 @@ char* getHostFromUrl(char* url) {
     memcpy(result, startHost, (size_t)(endHost - startHost));
     result[endHost - startHost] = '\0';
 
+    printf("Host:%s\n", result);
     return result;
 }
 
-int getStatusCodeAnswer(char* httpData) {
+ssize_t getStatusCodeAnswer(char* httpData) {
     char* afterHTTP = httpData + sizeof("HTTP/1.1");// ignore "HTTP/1.1 "
 
     char* strAfterCode;
-    int statusCode = (int)strtol(afterHTTP, &strAfterCode, DECIMAL);
+    ssize_t statusCode = (int)strtol(afterHTTP, &strAfterCode, DECIMAL);
     if (strAfterCode == afterHTTP || statusCode <= 0) {
         return ERROR;
     }
@@ -250,20 +251,6 @@ int getServerSocket(char* url) {
     return serverSocket;
 }
 
-void wrongMethod(connection* conn) {
-    char errorMessage[] = "405 Method Not Allowed\r\n";
-    write(conn->clientSocket, errorMessage, strlen(errorMessage));
-}
-
-void cannotResolve(connection* conn) {
-    char errorMessage[] = "523 Origin Is Unreachable\r\n";
-    write(conn->clientSocket, errorMessage, strlen(errorMessage));
-}
-
-struct cacheInfo cache[MAX_CACHE_SIZE];
-
-void writeToClient(connection *conn, int index, struct pollfd *fds, int *activeClientsCount);
-
 void freeBufferConnection(connection* conn) {
     if (conn->allSize > 0) {
         free(conn->buffer);
@@ -272,6 +259,48 @@ void freeBufferConnection(connection* conn) {
         conn->handleSize = 0;
     }
 }
+
+void dropConnection(connection *conn, int connIndex, int *activefdsCount) {
+
+    freeBufferConnection(&conn[connIndex]);
+
+    int error_code = close(conn[connIndex].clientSocket);
+    if (error_code == ERROR) {
+        perror("close client socket");
+    }
+
+    if (conn[connIndex].serverSocket != EMPTY) {
+        error_code = close(conn[connIndex].serverSocket);
+        if (error_code == ERROR) {
+            perror("close server socket");
+        }
+    }
+
+    conn[connIndex] = conn[*activefdsCount - 1];
+    conn[*activefdsCount - 1].buffer = NULL;
+    conn[*activefdsCount - 1].allSize = 0;
+    conn[*activefdsCount - 1].handleSize = 0;
+    conn[*activefdsCount - 1].cacheIndex = EMPTY;
+    conn[*activefdsCount - 1].serverSocket = EMPTY;
+    conn[*activefdsCount - 1].clientSocket = EMPTY;
+    conn[*activefdsCount - 1].status = NOT_ACTIVE;
+    (*activefdsCount)--;
+    printf("dropped connection\n");
+}
+
+void wrongMethod(connection* conn, int index, int* activeClients) {
+    char errorMessage[] = "405 Method Not Allowed\r\n";
+    write(conn[index].clientSocket, errorMessage, strlen(errorMessage));
+}
+
+void cannotResolve(connection* conn, int index, int* activeClients) {
+    char errorMessage[] = "523 Origin Is Unreachable\r\n";
+    write(conn->clientSocket, errorMessage, strlen(errorMessage));
+}
+
+struct cacheInfo cache[MAX_CACHE_SIZE];
+
+void writeToClient(connection *conn, int index, struct pollfd *fds, int *activeClientsCount);
 
 int searchCache(char* url, connection* conn) {
     for (int j = 0; j < MAX_CACHE_SIZE; j++) { //try find url in cache
@@ -298,7 +327,7 @@ int searchCache(char* url, connection* conn) {
 
             cache[j].url = (char*)malloc(strlen(url) + 1);
             if (cache[j].url == NULL) {
-                perror("malloc for url");
+                perror("malloc");
                 return ERROR;
             }
             memcpy(cache[j].url, url, strlen(url) + 1);
@@ -317,12 +346,12 @@ int searchCache(char* url, connection* conn) {
             conn->status = WRITE_TO_SERVER;
 
             free(cache[j].url);
-            cache[j].url = (char*)malloc(sizeof(url));
+            cache[j].url = (char *) malloc(sizeof(url));
             if (cache[j].url == NULL) {
-                perror("malloc for url");
+                perror("malloc");
                 return ERROR;
             }
-            memcpy(cache[j].url, url, sizeof(url));
+            memcpy(cache[j].url, url, strlen(url));
             return NOT_USING_CACHE;
         }
     }
@@ -367,16 +396,12 @@ void updatePoll(connection* conn, struct pollfd* fds, int activeClientsCount, in
                 fds[clifdIndex].events = POLLIN;
                 fds[srvfdIndex].events = POLLNONE;
                 break;
-            case WRITE_TO_CLIENT:
-                fds[clifdIndex].events = POLLOUT;
-                fds[srvfdIndex].events = POLLNONE;
-                break;
             case WRITE_TO_SERVER:
                 fds[clifdIndex].events = POLLNONE;
                 fds[srvfdIndex].events = POLLOUT;
                 break;
             case READ_FROM_SERVER:
-                fds[clifdIndex].events = POLLNONE;
+                fds[clifdIndex].events = POLLOUT;
                 fds[srvfdIndex].events = POLLIN;
                 break;
             case READ_FROM_CACHE_WRITE_CLIENT:
@@ -389,41 +414,13 @@ void updatePoll(connection* conn, struct pollfd* fds, int activeClientsCount, in
     }
 }
 
-void dropConnection(connection *conn, int connIndex, int *activefdsCount) {
-
-    freeBufferConnection(&conn[connIndex]);
-
-    int error_code = close(conn[connIndex].clientSocket);
-    if (error_code == ERROR) {
-        perror("close client socket");
-    }
-
-    if (conn[connIndex].serverSocket != EMPTY) {
-        error_code = close(conn[connIndex].serverSocket);
-        if (error_code == ERROR) {
-            perror("close server socket");
-        }
-    }
-
-    conn[connIndex] = conn[*activefdsCount - 1];
-    conn[*activefdsCount - 1].buffer = NULL;
-    conn[*activefdsCount - 1].allSize = 0;
-    conn[*activefdsCount - 1].handleSize = 0;
-    conn[*activefdsCount - 1].cacheIndex = EMPTY;
-    conn[*activefdsCount - 1].serverSocket = EMPTY;
-    conn[*activefdsCount - 1].clientSocket = EMPTY;
-    conn[*activefdsCount - 1].status = NOT_ACTIVE;
-    (*activefdsCount)--;
-    printf("dropped connection\n");
-}
-
 char* appendNewData(char* dstBuffer, size_t* oldSize, char* srcBuffer, size_t srcSize) {
     if (*oldSize == 0) {
         *oldSize = srcSize;
         dstBuffer = (char*)malloc(*oldSize);
         if (dstBuffer == NULL) {
             *oldSize = 0;
-            perror("malloc in appendNewData");
+            perror("allocation memory in appendNewData");
             return NULL;
         }
         memcpy(dstBuffer, srcBuffer, srcSize);
@@ -433,12 +430,12 @@ char* appendNewData(char* dstBuffer, size_t* oldSize, char* srcBuffer, size_t sr
     size_t old = *oldSize;
     *oldSize += srcSize;
     dstBuffer = (char*)realloc(dstBuffer, *oldSize);
-    memcpy(dstBuffer + old, srcBuffer, srcSize);
     if (dstBuffer == NULL) {
         *oldSize = 0;
         perror("allocation memory in appendNewData");
         return NULL;
     }
+    memcpy(dstBuffer + old, srcBuffer, srcSize);
 
     return dstBuffer;
 }
@@ -478,7 +475,9 @@ void parseClientMessage(connection* conn, int connIndex, int* activeClientsCount
         char* url = getUrlFromData(conn[connIndex].buffer);
         if (url != NULL) {
             if (!isGetRequest(conn[connIndex].buffer)) {
-                wrongMethod(&conn[connIndex]);
+                wrongMethod(conn, connIndex, activeClientsCount);
+                printf("Not get request\n");
+                printf("request = %s", conn[connIndex].buffer);
                 dropConnection(conn, connIndex, activeClientsCount);
                 free(url);
             }
@@ -486,6 +485,7 @@ void parseClientMessage(connection* conn, int connIndex, int* activeClientsCount
                 int foundInCache = searchCache(url, &conn[connIndex]);
                 if (foundInCache == ERROR) {
                     destroyCache();
+                    printf("ERROR: Cache is full");
                     exit(EXIT_FAILURE);
                 }
                 if (foundInCache == FREE_CACHE || foundInCache == NOT_USING_CACHE) { // if url wasn't in cache
@@ -495,12 +495,13 @@ void parseClientMessage(connection* conn, int connIndex, int* activeClientsCount
                     conn[connIndex].buffer = createGet(url, &conn[connIndex].allSize);
 
                     if (conn[connIndex].serverSocket == ERROR) {
-                        cannotResolve(&conn[connIndex]);
+                        cannotResolve(conn, connIndex, activeClientsCount);
                         printf("Can't create server socket\n");
                         dropConnection(conn, connIndex, activeClientsCount);
                         free(url);
                         return;
                     }
+                    printf("GET REQUEST FROM CLIENT\n");
                 }
             }
         }
@@ -551,7 +552,7 @@ void writeFromCacheToClient(connection* conn, int connIndex, struct pollfd* fds,
     if (fds[clientfdIndex].revents & POLLOUT) {
         int localCacheStat;
         localCacheStat = cache[conn[connIndex].cacheIndex].status;
-        if (localCacheStat == VALID) {
+        if (localCacheStat == VALID || localCacheStat == DOWNLOADING) {
             if (conn[connIndex].handleCacheSize < cache[conn[connIndex].cacheIndex].allSize) {
                 ssize_t writtenSize = send(
                         conn[connIndex].clientSocket,
@@ -566,8 +567,9 @@ void writeFromCacheToClient(connection* conn, int connIndex, struct pollfd* fds,
                 }
                 conn[connIndex].handleCacheSize += writtenSize;
             }
-            if (conn[connIndex].handleCacheSize == cache[conn[connIndex].cacheIndex].allSize) {
+            else if (conn[connIndex].handleCacheSize == cache[conn[connIndex].cacheIndex].allSize && localCacheStat == VALID) {
                 conn[connIndex].handleCacheSize = 0;
+                printf("SEND MESSAGE FROM CACHE TO CLIENT\n");
                 dropConnection(conn, connIndex, activefdsCount);
             }
         }
@@ -583,25 +585,35 @@ void putToCache(char* message, connection* conn, int connIndex, ssize_t readCoun
         int body = getBodyIndex(message, readCount);
         if (body == ERROR) return;
 
-        int statusCode = getStatusCodeAnswer(message);
+        ssize_t statusCode = getStatusCodeAnswer(message);
         if (statusCode != HTTP_STATUS_OK) {
+            printf("statusCode: %zd", statusCode);
             makeCacheInvalid(conn[connIndex].cacheIndex);
-            dropConnection(conn, connIndex, activefdsCount);
+            printf("DO NOT NEED TO BE CACHED\n");
             return;
         }
-        int size = readCount - body;
-        cache[conn[connIndex].cacheIndex].data = appendNewData(cache[conn[connIndex].cacheIndex].data,&cache[conn[connIndex].cacheIndex].allSize,
+        ssize_t size = readCount - body;
+        cache[conn[connIndex].cacheIndex].data = appendNewData(cache[conn[connIndex].cacheIndex].data,
+                                                               &cache[conn[connIndex].cacheIndex].allSize,
                                                                message + body,size);
+        if (cache[conn[connIndex].cacheIndex].data == NULL) {
+            dropConnection(conn, connIndex, activefdsCount);
+            printf("CACHE IS FULL");
+        }
         cache[conn[connIndex].cacheIndex].status = DOWNLOADING;
         cache[conn[connIndex].cacheIndex].readers--;
     }
     else if (readCount == 0) {
         cache[conn[connIndex].cacheIndex].status = VALID;
-        conn[connIndex].status = WRITE_TO_CLIENT;
+        printf("READ MESSAGE FROM SERVER\n");
     }
     else {
         cache[conn[connIndex].cacheIndex].data = appendNewData(cache[conn[connIndex].cacheIndex].data,&cache[conn[connIndex].cacheIndex].allSize,
                                                                message, readCount);
+        if (cache[conn[connIndex].cacheIndex].data == NULL) {
+            dropConnection(conn, connIndex, activefdsCount);
+            printf("Cache is full");
+        }
     }
 }
 
@@ -617,12 +629,14 @@ void readFromServer(connection* conn, int connIndex, struct pollfd* fds, int* ac
             return;
         }
         putToCache(message, conn, connIndex, readCount, activefdsCount);
+        writeToClient(conn, connIndex, fds, activefdsCount);
     }
 }
 
 void writeToClient(connection* conn, int clientIndex, struct pollfd* fds, int* activeClientsCount) {
     int clientfdIndex = clientIndex * 2 + 1;
-    if (fds[clientfdIndex].revents & POLLOUT && cache[conn[clientIndex].cacheIndex].status == VALID) {
+    if (fds[clientfdIndex].revents & POLLOUT &&
+        (cache[conn[clientIndex].cacheIndex].status == VALID || cache[conn[clientIndex].cacheIndex].status == DOWNLOADING)) {
         char* message = cache[conn[clientIndex].cacheIndex].data + conn[clientIndex].handleSize;
         size_t size = cache[conn[clientIndex].cacheIndex].allSize - conn[clientIndex].handleSize;
         ssize_t writeCount = send(conn[clientIndex].clientSocket, message, size, NO_FLAGS);
@@ -633,7 +647,8 @@ void writeToClient(connection* conn, int clientIndex, struct pollfd* fds, int* a
             return;
         }
         conn[clientIndex].handleSize += writeCount;
-        if (conn[clientIndex].handleSize == cache[conn[clientIndex].cacheIndex].allSize) {
+        if (writeCount == 0) {
+            printf("SEND MESSAGE TO CLIENT\n");
             dropConnection(conn, clientIndex, activeClientsCount);
             return;
         }
@@ -654,9 +669,6 @@ void handleEvent(connection* conn, int clientIndex, struct pollfd* fds, int* act
             readFromServer(conn, clientIndex, fds, activeClientsCount);
             break;
         }
-        case WRITE_TO_CLIENT:
-            writeToClient(conn, clientIndex, fds, activeClientsCount);
-            break;
         case READ_FROM_CACHE_WRITE_CLIENT: {
             writeFromCacheToClient(conn, clientIndex, fds, activeClientsCount);
             break;
@@ -708,7 +720,7 @@ int isValidPort(int port) {
 
 int main(int argc, char* argv[]) {
     if (argc != COMMAND_ARGUMENT_COUNT){
-        printf("Usage: <program> <proxy_port>\n");
+        printf("Usage: <program> <proxy_port>");
         return ERROR;
     }
 
