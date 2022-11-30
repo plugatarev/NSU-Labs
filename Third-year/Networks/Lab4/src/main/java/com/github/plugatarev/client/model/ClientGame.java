@@ -102,7 +102,7 @@ public final class ClientGame implements ClientGameHandler {
             return;
         }
         if (!response.getType().equals(MessageType.ACK)) {
-            logger.error("For Join message master didn't respond ACK message");
+            logger.error("For Join message, Server didn't respond with Ack message");
             return;
         }
 

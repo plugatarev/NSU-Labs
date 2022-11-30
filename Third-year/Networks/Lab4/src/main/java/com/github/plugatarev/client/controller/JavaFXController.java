@@ -13,7 +13,7 @@ import com.github.plugatarev.client.controller.events.JoinGameEvent;
 public final class JavaFXController implements GameController {
     private final GameConfig config;
     private final String playerName;
-    private final ClientGameHandler clientGameHandler;
+    private final ClientGameHandler clientGame;
     private final View view;
 
     @Override
@@ -21,22 +21,22 @@ public final class JavaFXController implements GameController {
         switch (userEvent.getType()) {
             case NEW_GAME -> {
                 view.setConfig(config);
-                clientGameHandler.startNewGame();
+                clientGame.startNewGame();
             }
             case JOIN_GAME -> {
                 JoinGameEvent joinEvent = (JoinGameEvent) userEvent;
                 view.setConfig(joinEvent.getConfig());
-                clientGameHandler.joinGame(joinEvent.getNode(), playerName);
+                clientGame.joinGame(joinEvent.getNode(), playerName);
             }
             case MOVE -> {
                 MoveEvent moveEvent = (MoveEvent) userEvent;
-                clientGameHandler.handleMove(moveEvent.getDirection());
+                clientGame.handleMove(moveEvent.getDirection());
             }
             case SERVER_PLAYER -> {
                 ServerPlayerEvent serverPlayerEvent = (ServerPlayerEvent) userEvent;
-                clientGameHandler.joinServerPlayer(serverPlayerEvent.getServerNetNode());
+                clientGame.joinServerPlayer(serverPlayerEvent.getServerNetNode());
             }
-            case EXIT -> clientGameHandler.exit();
+            case EXIT -> clientGame.exit();
         }
     }
 }

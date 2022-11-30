@@ -185,18 +185,19 @@ public final class GameSocket implements RDTSocket {
     }
 
     private class Receiver implements Runnable {
+        private static final int PACKET_SIZE = 4096;
+
         @Override
         public void run() {
             while (!Thread.currentThread().isInterrupted()) {
                 try {
-                    int PACKET_SIZE = 4096;
                     DatagramPacket packet = new DatagramPacket(new byte[PACKET_SIZE], PACKET_SIZE);
                     socket.receive(packet);
                     Message message = MessageParser.deserializeMessage(packet);
                     addReceivedMessage(new NetNode(packet.getAddress(), packet.getPort()), message);
                 }
                 catch (IOException exception) {
-                    logger.error(exception.getLocalizedMessage());
+                    logger.error(exception.getMessage());
                 }
             }
         }
