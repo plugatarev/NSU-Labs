@@ -16,10 +16,8 @@ public final class StateMessage extends Message {
     @Override
     public GameMessage getGameMessage() {
         var builder = GameMessage.newBuilder();
-
         var stateBuilder = GameMessage.StateMsg.newBuilder();
         stateBuilder.setState(StateUtils.createStateForMessage(gameState));
-
         builder.setState(stateBuilder.build());
         builder.setMsgSeq(getMessageSequence());
         return builder.build();

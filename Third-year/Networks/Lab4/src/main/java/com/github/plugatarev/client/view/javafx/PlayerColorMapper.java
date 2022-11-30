@@ -6,35 +6,31 @@ import javafx.scene.paint.Color;
 import java.util.*;
 
 public final class PlayerColorMapper {
+    private static final Color ZOMBIE_SNAKE_COLOR = Color.BLACK;
+    private static final List<Color> SNAKE_COLORS = List.of(Color.RED, Color.BLUE, Color.PURPLE);
+
     private final Map<Player, Color> playerColors;
     private int prevColorIndex;
 
-    private static final List<Color> snakeColors = List.of(Color.RED, Color.BLUE, Color.PURPLE);
-
-    private static final Color ZOMBIE_SNAKE_COLOR = Color.BLACK;
-
     public PlayerColorMapper() {
         playerColors = new HashMap<>();
-        prevColorIndex = new Random().nextInt(snakeColors.size());
+        prevColorIndex = -1;
     }
 
     public Optional<Color> getColor(Player player) {
-        return Optional.ofNullable(playerColors.get(player));
+        return Optional.of(playerColors.get(player));
     }
 
     public void addPlayer(Player player) {
-        int currentColorIndex = (prevColorIndex + 1) % snakeColors.size();
-        playerColors.put(player, snakeColors.get(currentColorIndex));
-        prevColorIndex = currentColorIndex;
+        prevColorIndex = (prevColorIndex + 1) % SNAKE_COLORS.size();
+        playerColors.put(player, SNAKE_COLORS.get(prevColorIndex));
     }
 
     public void removePlayer(Player player) {
-        Objects.requireNonNull(player, "Player for remove cant be null");
         playerColors.remove(player);
     }
 
     public boolean isPlayerRegistered(Player player) {
-        Objects.requireNonNull(player, "Player cant be null");
         return playerColors.containsKey(player);
     }
 
@@ -42,7 +38,7 @@ public final class PlayerColorMapper {
         return Collections.unmodifiableSet(playerColors.keySet());
     }
 
-    public Color getZombieSnakeColor() {
+    public Color getZombieColor() {
         return ZOMBIE_SNAKE_COLOR;
     }
 }

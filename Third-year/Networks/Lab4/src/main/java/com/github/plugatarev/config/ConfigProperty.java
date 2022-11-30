@@ -29,10 +29,10 @@ public final class ConfigProperty {
     public static GameConfig getConfig() {
         GameConfig.Builder builder = GameConfig.newBuilder();
         builder.clear();
-        builder.setHeight(getIntegerProperty(ConfigFieldNames.FIELD_HEIGHT, builder.getHeight()));
-        builder.setWidth(getIntegerProperty(ConfigFieldNames.FIELD_WIDTH, builder.getWidth()));
-        builder.setFoodStatic(getIntegerProperty(ConfigFieldNames.FOOD_STATIC, builder.getFoodStatic()));
-        builder.setStateDelayMs(getIntegerProperty(ConfigFieldNames.STATE_DELAY_MS, builder.getStateDelayMs()));
+        builder.setHeight(getIntegerProperty(ConfigFieldNames.getFIELD_HEIGHT(), builder.getHeight()));
+        builder.setWidth(getIntegerProperty(ConfigFieldNames.getFIELD_WIDTH(), builder.getWidth()));
+        builder.setFoodStatic(getIntegerProperty(ConfigFieldNames.getFOOD_STATIC(), builder.getFoodStatic()));
+        builder.setStateDelayMs(getIntegerProperty(ConfigFieldNames.getSTATE_DELAY_MS(), builder.getStateDelayMs()));
         return builder.build();
     }
 

@@ -1,11 +1,10 @@
 package com.github.plugatarev.config;
 
-import lombok.experimental.UtilityClass;
+import lombok.Getter;
 
-@UtilityClass
 public final class ConfigFieldNames {
-    public static final String FIELD_WIDTH = "field_width";
-    public static final String FIELD_HEIGHT = "field_height";
-    public static final String FOOD_STATIC = "food_static";
-    public static final String STATE_DELAY_MS = "state_delay_ms";
+    @Getter private static final String FIELD_WIDTH = "field_width";
+    @Getter private static final String FIELD_HEIGHT = "field_height";
+    @Getter private static final String FOOD_STATIC = "food_static";
+    @Getter private static final String STATE_DELAY_MS = "state_delay_ms";
 }

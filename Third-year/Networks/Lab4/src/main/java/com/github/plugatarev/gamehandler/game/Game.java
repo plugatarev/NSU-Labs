@@ -10,7 +10,7 @@ import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
 import com.github.plugatarev.gamehandler.Coord;
 import com.github.plugatarev.gamehandler.Snake;
-import com.github.plugatarev.server.ServerHandler;
+import com.github.plugatarev.master.MasterHandler;
 import com.github.plugatarev.utils.PlayerUtils;
 
 import java.util.*;
@@ -33,22 +33,22 @@ public final class Game implements GameHandler {
     @Getter private final GameConfig config;
     private final GameField field;
     private final List<Cell> foods;
-    private final ServerHandler serverHandler;
+    private final MasterHandler masterHandler;
 
     private int stateID;
     private int playerIDCounter = 1;
 
-    public Game(GameConfig config, ServerHandler serverHandler) {
+    public Game(GameConfig config, MasterHandler masterHandler) {
         this.config = config;
-        this.serverHandler = serverHandler;
+        this.masterHandler = masterHandler;
         this.field = new GameField(this.config.getWidth(), this.config.getHeight());
         this.stateID = 0;
         this.foods = new ArrayList<>(this.config.getFoodStatic());
         generateFoods();
     }
 
-    public Game(GameState state, ServerHandler serverHandler) {
-        this.serverHandler = serverHandler;
+    public Game(GameState state, MasterHandler masterHandler) {
+        this.masterHandler = masterHandler;
         config = state.getGameConfig();
         field = new GameField(config.getWidth(), config.getHeight());
         stateID = state.getStateID() + 1;
@@ -121,7 +121,7 @@ public final class Game implements GameHandler {
             markPlayerInactive(player);
         });
         playersForRemove.clear();
-        serverHandler.update(generateGameState());
+        masterHandler.update(generateGameState());
     }
 
     @Override

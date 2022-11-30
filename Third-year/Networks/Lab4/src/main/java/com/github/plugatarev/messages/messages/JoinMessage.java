@@ -23,12 +23,10 @@ public final class JoinMessage extends Message {
     @Override
     public GameMessage getGameMessage() {
         var builder = GameMessage.newBuilder();
-
         var joinBuilder = GameMessage.JoinMsg.newBuilder();
         joinBuilder.setPlayerName(playerName);
         joinBuilder.setGameName(gameName);
         joinBuilder.setRequestedRole(role);
-
         builder.setJoin(joinBuilder.build());
         builder.setMsgSeq(getMessageSequence());
         return builder.build();

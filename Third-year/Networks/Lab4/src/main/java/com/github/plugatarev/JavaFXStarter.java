@@ -1,7 +1,7 @@
 package com.github.plugatarev;
 
 import com.github.plugatarev.client.controller.JavaFXController;
-import com.github.plugatarev.client.model.NetGame;
+import com.github.plugatarev.client.model.ClientGame;
 import com.github.plugatarev.client.view.javafx.GameView;
 import com.github.plugatarev.config.ConfigProperty;
 import com.github.plugatarev.multicastreceiver.MulticastReceiver;
@@ -29,7 +29,7 @@ public final class JavaFXStarter extends Application {
     @Setter private static NetworkInterface networkInterface;
 
     private MulticastReceiver multicastReceiver;
-    private NetGame netGame;
+    private ClientGame netGame;
 
     public static void main(String[] args) {
         launch(args);
@@ -47,10 +47,10 @@ public final class JavaFXStarter extends Application {
             SplitPane root = loader.load();
 
             GameView view = loader.getController();
-            netGame = new NetGame(config, playerName, view, multicastInfo, networkInterface);
+            netGame = new ClientGame(config, playerName, view, multicastInfo, networkInterface);
             JavaFXController gameController = new JavaFXController(config, playerName, netGame, view);
 
-            multicastReceiver = new MulticastReceiver(multicastInfo, view, netGame, networkInterface);
+            multicastReceiver = new MulticastReceiver(multicastInfo, view, networkInterface);
             multicastReceiver.start();
 
             view.setStage(stage);

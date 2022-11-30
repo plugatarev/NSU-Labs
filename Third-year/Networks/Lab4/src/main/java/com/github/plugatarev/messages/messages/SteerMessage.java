@@ -15,12 +15,10 @@ public final class SteerMessage extends Message {
     @Override
     public GameMessage getGameMessage() {
         var builder = GameMessage.newBuilder();
-
         var steerBuilder = GameMessage.SteerMsg.newBuilder();
         steerBuilder.setDirection(direction);
         builder.setSteer(steerBuilder.build());
         builder.setMsgSeq(getMessageSequence());
-
         return builder.build();
     }
 }

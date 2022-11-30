@@ -241,7 +241,7 @@ public final class GameView implements View {
         Map<Snake, Color> snakes = new HashMap<>();
         for (var snake : state.getSnakes()) {
             if (snake.getState() == SnakesProto.GameState.Snake.SnakeState.ZOMBIE) {
-                snakes.put(snake, colorMapper.getZombieSnakeColor());
+                snakes.put(snake, colorMapper.getZombieColor());
                 continue;
             }
             Color playerColor = colorMapper.getColor(

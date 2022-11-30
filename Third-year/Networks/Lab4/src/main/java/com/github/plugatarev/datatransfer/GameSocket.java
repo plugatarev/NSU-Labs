@@ -31,7 +31,7 @@ public final class GameSocket implements RDTSocket {
     private final Map<Instant, MessageOwner> receivedMessages = new HashMap<>();
     private final Map<Long, TimerTask> sendTasks = new HashMap<>();
 
-    private Thread receiver = null;
+    private Thread receiver;
     private Timer timer = new Timer();
 
     public GameSocket(NetworkInterface networkInterface, int sendDelayMs) throws IOException {
@@ -112,7 +112,7 @@ public final class GameSocket implements RDTSocket {
                     socket.send(packet);
                 }
                 catch (IOException exception) {
-                    logger.error(exception.getLocalizedMessage());
+                    logger.error(exception.getMessage());
                 }
             }
         };
@@ -126,7 +126,7 @@ public final class GameSocket implements RDTSocket {
             socket.send(MessageParser.serializeMessage(message, receiver.getAddress(), receiver.getPort()));
         }
         catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
     }
 
@@ -143,9 +143,9 @@ public final class GameSocket implements RDTSocket {
                 }
             }
 
-            Instant earliest = receivedMessages.keySet().stream().findFirst().get();
-            received = receivedMessages.get(earliest);
-            receivedMessages.remove(earliest);
+            Instant key = receivedMessages.keySet().stream().findFirst().get();
+            received = receivedMessages.get(key);
+            receivedMessages.remove(key);
         }
         return received;
     }

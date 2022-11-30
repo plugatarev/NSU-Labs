@@ -1,4 +1,4 @@
-package com.github.plugatarev.server;
+package com.github.plugatarev.master;
 
 import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.NodeRole;
@@ -26,10 +26,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-public final class ServerGame implements ServerHandler {
+public final class MasterGame implements MasterHandler {
     private static final int EMPTY = -1;
 
-    private static final Logger logger = Logger.getLogger(ServerGame.class);
+    private static final Logger logger = Logger.getLogger(MasterGame.class);
     public static final int ANNOUNCEMENT_SEND_PERIOD_MS = 1000;
     private final GameHandler game;
     private final SnakesProto.GameConfig gameConfig;
@@ -46,10 +46,8 @@ public final class ServerGame implements ServerHandler {
     private Thread receiveThread = null;
     private Player masterPlayer = null;
     private Player deputyPlayer = null;
-    private Player potentialDeputyPlayer = null;
-    private boolean isDeputyBeingChosen = false;
 
-    public ServerGame(SnakesProto.GameConfig gameConfig, InetSocketAddress multicastAddress,
+    public MasterGame(SnakesProto.GameConfig gameConfig, InetSocketAddress multicastAddress,
                       InetAddress masterAddress, int masterPort, String masterName,
                       NetworkInterface networkInterface, String gameName) throws IOException {
         this.gameConfig = gameConfig;
@@ -70,7 +68,7 @@ public final class ServerGame implements ServerHandler {
         startReceivingMessages();
     }
 
-    public ServerGame(GameState gameState, InetSocketAddress multicastAddress, NetworkInterface networkInterface, String gameName) throws IOException {
+    public MasterGame(GameState gameState, InetSocketAddress multicastAddress, NetworkInterface networkInterface, String gameName) throws IOException {
         gameConfig = gameState.getGameConfig();
         game = new Game(gameState, this);
         this.multicastAddress = multicastAddress;
@@ -79,11 +77,12 @@ public final class ServerGame implements ServerHandler {
         socket.start();
 
         gameState.getActivePlayers().forEach(player -> {
-            player.setRole(player.getRole().equals(NodeRole.MASTER) ? NodeRole.NORMAL : player.getRole());
+            player.setRole(player.getRole().equals(NodeRole.MASTER) ? NodeRole.VIEWER : player.getRole());
             player.setRole(player.getRole().equals(NodeRole.DEPUTY) ? NodeRole.MASTER : player.getRole());
             if (player.getRole().equals(NodeRole.MASTER)) {
                 masterPlayer = player;
             }
+            chooseNewDeputy();
             playersLastSeen.put(player, Instant.now());
             if (!player.getRole().equals(NodeRole.VIEWER)) {
                 playersMoves.put(player, game.getSnakeByPlayer(player).getDirection());
@@ -174,11 +173,6 @@ public final class ServerGame implements ServerHandler {
                         });
                         playersLastSeen.entrySet().removeIf(entry -> isDisconnected(entry.getValue()));
 
-                        if (potentialDeputyPlayer != null && !playersLastSeen.containsKey(potentialDeputyPlayer)) {
-                            potentialDeputyPlayer = null;
-                            isDeputyBeingChosen = false;
-                            chooseNewDeputy();
-                        }
                         if (deputyPlayer != null && !playersLastSeen.containsKey(deputyPlayer)) {
                             deputyPlayer = null;
                             chooseNewDeputy();
@@ -217,18 +211,12 @@ public final class ServerGame implements ServerHandler {
     private void chooseNewDeputy() {
         Optional<Player> playerOptional = playersLastSeen.keySet().stream().filter(player -> player.getRole() != NodeRole.MASTER).findAny();
         playerOptional.ifPresentOrElse(
-                    this::setDeputyPlayer,
-                    () -> {
-                        logger.warn("Can't chose deputy");
-                        isDeputyBeingChosen = false;
-                    }
-            );
-        isDeputyBeingChosen = true;
+                this::setDeputyPlayer,
+                () -> logger.warn("Can't chose deputy")
+        );
     }
 
-
     private void setDeputyPlayer(Player deputy) {
-        potentialDeputyPlayer = deputy;
         Message response = socket.send(
                 new RoleChangeMessage(NodeRole.MASTER, NodeRole.DEPUTY, msgSeq.getAndIncrement(), masterPlayer.getId(), deputy.getId()),
                 deputy.getNetNode()
@@ -237,8 +225,6 @@ public final class ServerGame implements ServerHandler {
             deputyPlayer = deputy;
             deputyPlayer.setRole(NodeRole.DEPUTY);
         }
-        potentialDeputyPlayer = null;
-        isDeputyBeingChosen = false;
     }
 
     private boolean isDisconnected(Instant moment) {
@@ -265,8 +251,8 @@ public final class ServerGame implements ServerHandler {
             return Optional.of(player);
         }
         catch (IllegalStateException exception) {
-            logger.debug("Cant place player on field because no space");
-            String errorMessage = "Cant place player on field because no space";
+            String errorMessage = "Can't place player on field because no space";
+            logger.debug(errorMessage);
             this.socket.sendWithoutConfirm(
                     new ErrorMessage(errorMessage, msgSeq.getAndIncrement(), masterPlayer.getId(), EMPTY),
                     netNode
@@ -313,7 +299,7 @@ public final class ServerGame implements ServerHandler {
                                     logger.debug("NetNode=" + sender + " was successfully registered as player=" + player);
                                     player.setRole(NodeRole.NORMAL);
                                     player.setScore(0);
-                                    if (deputyPlayer == null && !isDeputyBeingChosen) {
+                                    if (deputyPlayer == null) {
                                         chooseNewDeputy();
                                     }
                                 }

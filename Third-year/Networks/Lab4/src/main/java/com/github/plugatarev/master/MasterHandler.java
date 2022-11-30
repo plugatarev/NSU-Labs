@@ -1,8 +1,8 @@
-package com.github.plugatarev.server;
+package com.github.plugatarev.master;
 
 import com.github.plugatarev.gamehandler.GameState;
 
-public interface ServerHandler {
+public interface MasterHandler {
     void update(GameState state);
     int getPort();
     void stop();

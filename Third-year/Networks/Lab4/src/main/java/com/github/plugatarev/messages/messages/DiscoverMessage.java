@@ -10,10 +10,8 @@ public class DiscoverMessage extends Message {
     @Override
     public SnakesProto.GameMessage getGameMessage() {
         GameMessage.Builder build = GameMessage.newBuilder();
-
         GameMessage.DiscoverMsg.Builder discoverBuilder = GameMessage.DiscoverMsg.newBuilder();
         build.setDiscover(discoverBuilder.build());
-
         return build.build();
     }
 }

@@ -4,7 +4,6 @@ import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.datatransfer.NetNode;
 import com.github.plugatarev.gamehandler.Player;
 import org.apache.log4j.Logger;
-import com.github.plugatarev.client.model.NetGame;
 import com.github.plugatarev.client.view.View;
 import com.github.plugatarev.messages.MessageParser;
 import com.github.plugatarev.messages.messages.Message;
@@ -25,20 +24,18 @@ public final class MulticastReceiver {
     private static final int SO_TIMEOUT_MS = 3000;
 
     private final View view;
-    private final NetGame netGame;
     private final InetSocketAddress multicastInfo;
     private final NetworkInterface networkInterface;
     private final Thread checkerThread;
 
     private final Map<GameInfo, Instant> gameInfos = new HashMap<>();
 
-    public MulticastReceiver(InetSocketAddress multicastInfo, View view, NetGame game, NetworkInterface networkInterface) {
+    public MulticastReceiver(InetSocketAddress multicastInfo, View view, NetworkInterface networkInterface) {
         validateAddress(multicastInfo.getAddress());
         this.multicastInfo = multicastInfo;
         this.networkInterface = networkInterface;
         this.view = view;
-        this.netGame = game;
-        this.checkerThread = new Thread(getChecker());
+        this.checkerThread = new Thread(receiveMulticast());
     }
 
     private void validateAddress(InetAddress multicastAddress) {
@@ -55,7 +52,7 @@ public final class MulticastReceiver {
         checkerThread.interrupt();
     }
 
-    private Runnable getChecker() {
+    private Runnable receiveMulticast() {
         return () -> {
             try (MulticastSocket socket = new MulticastSocket(multicastInfo.getPort())) {
                 byte[] buffer = new byte[BUFFER_SIZE];
@@ -78,7 +75,6 @@ public final class MulticastReceiver {
                     }
                     gameInfos.entrySet().removeIf(entry ->
                             Duration.between(entry.getValue(), Instant.now()).abs().toMillis() >= SO_TIMEOUT_MS);
-                    netGame.updateActiveGames(gameInfos.keySet());
                     view.updateGameList(gameInfos.keySet());
                 }
                 socket.leaveGroup(multicastInfo, networkInterface);

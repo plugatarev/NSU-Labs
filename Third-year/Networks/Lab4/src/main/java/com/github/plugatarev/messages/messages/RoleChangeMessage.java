@@ -17,11 +17,9 @@ public final class RoleChangeMessage extends Message {
     @Override
     public GameMessage getGameMessage() {
         var builder = GameMessage.newBuilder();
-
         var roleBuilder = GameMessage.RoleChangeMsg.newBuilder();
         roleBuilder.setSenderRole(senderRole);
         roleBuilder.setReceiverRole(receiverRole);
-
         builder.setRoleChange(roleBuilder.build());
         builder.setMsgSeq(getMessageSequence());
         builder.setSenderId(getSenderID());
