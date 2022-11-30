@@ -3,7 +3,6 @@ package com.github.plugatarev.gamehandler.game;
 import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.SnakesProto.GameConfig;
 import com.github.plugatarev.datatransfer.NetNode;
-import com.github.plugatarev.gamehandler.GameHandler;
 import lombok.Getter;
 import org.apache.log4j.Logger;
 import com.github.plugatarev.gamehandler.GameState;

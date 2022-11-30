@@ -5,7 +5,7 @@ import com.github.plugatarev.SnakesProto.NodeRole;
 import com.github.plugatarev.datatransfer.GameSocket;
 import com.github.plugatarev.datatransfer.NetNode;
 import com.github.plugatarev.datatransfer.RDTSocket;
-import com.github.plugatarev.gamehandler.GameHandler;
+import com.github.plugatarev.gamehandler.game.GameHandler;
 import com.github.plugatarev.gamehandler.GameState;
 import com.github.plugatarev.gamehandler.Player;
 import com.github.plugatarev.gamehandler.game.Game;

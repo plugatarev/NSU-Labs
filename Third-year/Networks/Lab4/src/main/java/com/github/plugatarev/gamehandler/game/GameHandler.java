@@ -1,7 +1,9 @@
-package com.github.plugatarev.gamehandler;
+package com.github.plugatarev.gamehandler.game;
 
 import com.github.plugatarev.SnakesProto;
 import com.github.plugatarev.datatransfer.NetNode;
+import com.github.plugatarev.gamehandler.Player;
+import com.github.plugatarev.gamehandler.Snake;
 
 import java.util.Map;
 
