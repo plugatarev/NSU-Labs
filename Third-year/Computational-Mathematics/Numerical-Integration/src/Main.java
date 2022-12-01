@@ -5,7 +5,7 @@ public class Main {
     private static final int NUMBER_PARTITION_SEGMENTS = 5;
 
     public static void main(String[] args) {
-        Function<Double, Double> f = (x) -> 1 / (1 + x * x);
+        Function<Double, Double> f = (x) -> 1/(1 + Math.exp(x));
         Scanner input = new Scanner(System.in);
         int[] n = new int[NUMBER_PARTITION_SEGMENTS];
         System.out.print("Введите число отрезков разбияния в количестве " + NUMBER_PARTITION_SEGMENTS + ": ");
