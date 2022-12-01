@@ -1,0 +1,15 @@
+VAR v : int;
+VAR x : int;
+{
+	print(v);
+	print(v);
+	x := (x + 1);
+	v := 1;
+	{
+		x := (x + 1) U 
+		x := (x - 1) 
+	};
+	(x < (x + 1)) ?;
+	x := (x + (2 * x));
+	print(x)
+}

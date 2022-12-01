@@ -1,0 +1,43 @@
+import fs/filesystem;
+import nemo/nemo_ast;
+import nemo/nemo_typecheck;
+import nemo/nemo_transl;
+import nemo/vnemo_run;
+main() {
+    nemo = \file -> {
+        println("--------------------------------- NEW TEST ----------------------------------------\n");
+        src = getFileContent(file);
+        prog = s2nm(src);
+        err_count = ref 0;
+        err = \msg -> {
+            err_count := ^err_count + 1;
+            println(msg);
+        }
+        typecheckNmProgram(prog, err);
+        if (^err_count == 0) {
+            println("nemo prog " + file + ":");
+            println(nmProg2s(prog));
+            println("-----------------------------------------------------------------------------------------\n");
+            println(prog);
+        }
+
+        println("-----------------------------------------------------------------------------------------\n");
+
+        switch (nm2vnm(prog)) {
+            Some(vprog): {
+                fd = changeFileExt(file, ".vnm");
+                setFileContent(fd, vnmProg2s(vprog));
+                println(s2vnm(getFileContent(fd)));
+                println("-----------------------------------------------------------------------------------------\n");
+                println(vnmProg2s(vprog));
+                println("RESULT");
+                runVnemo(vprog);
+            }
+            None(): {} 
+        }
+    }
+    
+    nemo("test0.nm");
+    nemo("test1.nm");
+    nemo("test2.nm");
+}
