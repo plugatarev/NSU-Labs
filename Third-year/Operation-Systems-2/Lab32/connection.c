@@ -24,7 +24,6 @@ void dropConnection(connection* conn) {
             perror("close server socket");
         }
     }
-    conn->status = DROP;
     conn->handleSize = 0;
     conn->handleCacheSize = 0;
     conn->cacheIndex = EMPTY;

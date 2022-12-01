@@ -5,24 +5,11 @@
 #include "cache.h"
 #include "connection.h"
 
-void nonblock(int fd) {
-    int flags = fcntl(fd, F_GETFL, O_NONBLOCK);
-    if (flags == ERROR) {
-        perror("fcntl");
-        return;
-    }
-    flags |= O_NONBLOCK;
-    int res = fcntl(fd, F_SETFL, flags);
-    if (res == ERROR) {
-        perror("fcntl");
-    }
-}
-
 struct cacheInfo cache[MAX_CACHE_SIZE];
 
 void writeToClient(connection* conn) {
     lockMutex(&cache[conn->cacheIndex].mutex);
-    printf("WRITE TO CLIENT\n");
+//    printf("WRITE TO CLIENT\n");
     if (cache[conn->cacheIndex].status == VALID || cache[conn->cacheIndex].status == DOWNLOADING) {
         char* message = cache[conn->cacheIndex].data + conn->handleSize;
         size_t size = cache[conn->cacheIndex].allSize - conn->handleSize;
@@ -36,7 +23,7 @@ void writeToClient(connection* conn) {
         }
         conn->handleSize += writeCount;
         if (writeCount == 0) {
-            printf("SEND MESSAGE TO CLIENT\n");
+//            printf("SEND MESSAGE TO CLIENT\n");
             conn->status = DROP;
             unlockMutex(&cache[conn->cacheIndex].mutex);
             return;
@@ -67,13 +54,15 @@ char* appendNewData(char* dstBuffer, size_t* oldSize, char* srcBuffer, size_t sr
 }
 
 void writeToServer(connection* conn) {
-    printf("WRITE TO SERVER\n");
+//    printf("WRITE TO SERVER\n");
     if (conn->handleSize < conn->allSize) {
         ssize_t res = send(conn->serverSocket, conn->buffer + conn->handleSize,
                            conn->allSize, NO_FLAGS);
         conn->handleSize += res;
         if (res == ERROR) {
+            lockMutex(&cache[conn->cacheIndex].mutex);
             makeCacheInvalid(cache, conn->cacheIndex);
+            unlockMutex(&cache[conn->cacheIndex].mutex);
             conn->status = DROP;
             return;
         }
@@ -85,33 +74,27 @@ void writeToServer(connection* conn) {
 }
 
 void readFromClient(connection* conn) {
-    printf("READ FROM CLIENT\n");
+//    printf("READ FROM CLIENT\n");
     char buf[BUFFER_SIZE];
     ssize_t readCount;
-    for (int i = 0; i < 2; i++) {
-        readCount = recv(conn->clientSocket, buf, BUFFER_SIZE, NO_FLAGS);
-        if (readCount == ERROR) {
-            if (errno == EAGAIN) {
-                readCount = EOF;
-                break;
-            }
-            perror("receive buffer from client");
-            conn->status = DROP;
-            return;
-        }
-//        nonblock(conn->clientSocket);
-        conn->buffer = appendNewData(conn->buffer, &conn->allSize, buf, readCount);
-        if (conn->buffer == NULL) {
-            conn->status = DROP;
-            return;
-        }
+    readCount = recv(conn->clientSocket, buf, BUFFER_SIZE, NO_FLAGS);
+    if (readCount == ERROR) {
+        perror("receive buffer from client");
+        conn->status = DROP;
+        return;
     }
-    if (conn->buffer != NULL && readCount == EOF) parseClientMessage(cache, conn);
-    else if (conn->buffer == NULL && readCount == EOF) conn->status = DROP;
+    conn->buffer = appendNewData(conn->buffer, &conn->allSize, buf, readCount);
+    if (conn->buffer == NULL) {
+        conn->status = DROP;
+        return;
+    }
+
+    if (conn->buffer != NULL && buf[readCount] == '\0') parseClientMessage(cache, conn);
+    else if (conn->buffer == NULL && buf[readCount] == '\0') conn->status = DROP;
 }
 
 void writeFromCacheToClient(connection* conn) {
-    printf("WRITE FROM CACHE TO CLIENT\n");
+//    printf("WRITE FROM CACHE TO CLIENT\n");
     int localCacheStat;
     localCacheStat = cache[conn->cacheIndex].status;
     lockMutex(&cache[conn->cacheIndex].mutex);
@@ -133,7 +116,7 @@ void writeFromCacheToClient(connection* conn) {
         }
         else if (conn->handleCacheSize == cache[conn->cacheIndex].allSize && localCacheStat == VALID) {
             conn->handleCacheSize = 0;
-            printf("SEND MESSAGE FROM CACHE TO CLIENT\n");
+//            printf("SEND MESSAGE FROM CACHE TO CLIENT\n");
             conn->status = DROP;
         }
         unlockMutex(&cache[conn->cacheIndex].mutex);
@@ -155,9 +138,9 @@ void putToCache(char* message, connection* conn, ssize_t readCount) {
 
         ssize_t statusCode = getStatusCodeAnswer(message);
         if (statusCode != HTTP_STATUS_OK) {
-            printf("statusCode: %zd\n", statusCode);
+//            printf("statusCode: %zd\n", statusCode);
             makeCacheInvalid(cache, conn->cacheIndex);
-            printf("DO NOT NEED TO BE CACHED\n");
+//            printf("DO NOT NEED TO BE CACHED\n");
             conn->status = DROP;
             unlockMutex(&cache[conn->cacheIndex].mutex);
             return;
@@ -167,40 +150,42 @@ void putToCache(char* message, connection* conn, ssize_t readCount) {
                                                      &cache[conn->cacheIndex].allSize,
                                                      message + body,size);
         if (cache[conn->cacheIndex].data == NULL) {
-            dropConnection(conn);
             printf("CACHE IS FULL");
+            conn->status = DROP;
         }
         cache[conn->cacheIndex].status = DOWNLOADING;
         cache[conn->cacheIndex].readers--;
     }
     else if (readCount == 0) {
         cache[conn->cacheIndex].status = VALID;
-        printf("READ MESSAGE FROM SERVER\n");
+//        printf("READ MESSAGE FROM SERVER\n");
     }
     else {
         cache[conn->cacheIndex].data = appendNewData(cache[conn->cacheIndex].data,&cache[conn->cacheIndex].allSize,
                                                      message, readCount);
         if (cache[conn->cacheIndex].data == NULL) {
+            printf("CACHE IS FULL");
             conn->status = DROP;
-            printf("Cache is full");
         }
     }
     unlockMutex(&cache[conn->cacheIndex].mutex);
 }
 void readFromServer(connection* conn) {
-    printf("READ FROM SERVER\n");
+//    printf("READ FROM SERVER\n");
     char message[BUFFER_SIZE];
     ssize_t readCount = recv(conn->serverSocket, message, BUFFER_SIZE, NO_FLAGS);
-    printf("%ld\n", readCount);
     if (readCount == ERROR) {
         perror("receive from server");
+        lockMutex(&cache[conn->cacheIndex].mutex);
         makeCacheInvalid(cache, conn->cacheIndex);
+        unlockMutex(&cache[conn->cacheIndex].mutex);
         conn->status = DROP;
         return;
     }
     putToCache(message, conn, readCount);
     if (conn->status == DROP) return;
     writeToClient(conn);
+//    if (message[readCount] == '\0') conn->status = DROP;
 }
 
 int handleEvent(connection* conn) {
@@ -233,10 +218,10 @@ void* run(void* param) {
         return ERROR_CODE;
     }
     connection* conn = (connection*) param;
-    int isOpen = TRUE;
+    int isOpenConn = TRUE;
     do {
-        isOpen = handleEvent(conn);
-    } while (isOpen);
+        isOpenConn = handleEvent(conn);
+    } while (isOpenConn);
     dropConnection(conn);
     free(conn);
     return SUCCESS_CODE;
@@ -267,13 +252,13 @@ int main(int argc, char* argv[]) {
         perror("signal");
         return ERROR;
     }
-    pthread_attr_t attrDet;
-    error_code = pthread_attr_init(&attrDet);
+    pthread_attr_t attr;
+    error_code = pthread_attr_init(&attr);
     if (error_code != SUCCESS) {
         perror("pthread_attr_init");
         return ERROR;
     }
-    error_code = pthread_attr_setdetachstate(&attrDet, PTHREAD_CREATE_DETACHED);
+    error_code = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     if (error_code != SUCCESS) {
         perror("pthread_attr_setdetachstate");
         return ERROR;
@@ -288,7 +273,7 @@ int main(int argc, char* argv[]) {
         conn->status = READ_FROM_CLIENT;
 
         pthread_t thread;
-        error_code = pthread_create(&thread, &attrDet, run, (void*)conn);
+        error_code = pthread_create(&thread, &attr, run, (void*)conn);
         if (error_code != SUCCESS) {
             perror("pthread_create");
             free(conn);
