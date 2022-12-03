@@ -41,20 +41,6 @@ public class ImplicitSchema {
             double[] alpha = initAlpha(koef, numH);
             int numT = (int)(maxT / tau);
             for (int i = 0; i < numT; i++) {
-//                double prevBeta = getU(numH * h - tau * (i + 1));
-//                for (int j = 0; j <= numH; j++) {
-//                    double beta = j == 0 ? prevBeta : getBeta(koef, prevBeta, u[i][j], alpha[j - 1]);
-//                    prevBeta = beta;
-//                    u[i + 1][j] = alpha[j] * getU((j + 1) * h - (i + 1) * tau) + beta;
-//                    if (Math.abs(i * tau - 1.0) < 0.000001) {
-//                        exactSolve[0][j] = getU(j * h - 1);
-//                        res[0][j] = u[i][j];
-//                    }
-//                    if (Math.abs((i + 1) * tau - 5.0) < 0.000001) {
-//                        exactSolve[1][j] = getU(j * h - 5);
-//                        res[1][j] = u[i + 1][j];
-//                    }
-//                }
                 double[] beta = initBeta(u, numH, h, tau, i, koef, alpha);
                 for (int j = numH; j >= 0; j--) {
                     u[i + 1][j] = j == numH ? alpha[j] * getU((j + 1) * h - (i + 1) * tau) + beta[j]
