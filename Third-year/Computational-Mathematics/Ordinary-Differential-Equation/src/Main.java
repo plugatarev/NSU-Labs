@@ -39,25 +39,26 @@ public class Main {
         double[] rkY3 = RungeKutta.calculate(f, y0, beginSegment, endSegment, h * 0.25);
         double[] eulerY3 = Euler.calculate(f, y0, beginSegment, endSegment, h * 0.25);
         double[] eulerRecY3 = EulerRecalculation.calculate(f, y0, beginSegment, endSegment, h * 0.25);
+
         System.out.println("----------Runge-Kutta----------");
         for (int j = 0; j <= 50; j++) {
-            double delta1 = Math.abs(rkY1[j] - rkY2[j]);
-            double delta2 = Math.abs(rkY2[j] - rkY3[j]);
-            System.out.println(j * h + " " + (delta1 / (1 - (delta2 / delta1))));
+            double delta1 = Math.abs(rkY1[j] - rkY2[2 * j]);
+            double delta2 = Math.abs(rkY2[2 * j] - rkY3[4 * j]);
+            System.out.println(j * h + " " + Math.log(delta1 / delta2) / Math.log(2));
         }
 
         System.out.println("----------Euler----------");
         for (int j = 0; j <= 50; j++) {
-            double delta1 = Math.abs(eulerY1[j] - eulerY2[j]);
-            double delta2 = Math.abs(eulerY2[j] - eulerY3[j]);
-            System.out.println(j * h + " " + (delta1 / (1 - (delta2 / delta1))));
+            double delta1 = Math.abs(eulerY1[j] - eulerY2[2 * j]);
+            double delta2 = Math.abs(eulerY2[2 * j] - eulerY3[4 * j]);
+            System.out.println(j * h + " " + Math.log(delta1 / delta2) / Math.log(2));
         }
 
         System.out.println("----------Euler-Recalculation----------");
         for (int j = 0; j <= 50; j++) {
-            double delta1 = Math.abs(eulerRecY1[j] - eulerRecY2[j]);
-            double delta2 = Math.abs(eulerRecY2[j] - eulerRecY3[j]);
-            System.out.println(j * h + " " + (delta1 / (1 - (delta2 / delta1))));
+            double delta1 = Math.abs(eulerRecY1[j] - eulerRecY2[2 * j]);
+            double delta2 = Math.abs(eulerRecY2[2 * j] - eulerRecY3[4 * j]);
+            System.out.println(j * h + " " + Math.log(delta1 / delta2) / Math.log(2));
         }
     }
 }
