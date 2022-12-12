@@ -31,7 +31,7 @@ char* createGetRequest(char* url, size_t* len) {
         sprintf(buffer, request, "/", hostName);
     }
     else {
-        *len = strlen(request) - 4 + strlen(afterHost) + strlen(hostName);
+        *len = strlen(request) - 4 + strlen(afterHost) + strlen(hostName) + 1;
         buffer = (char*) malloc(sizeof(char) * (*len));
         if (buffer == NULL) {
             perror("malloc");
