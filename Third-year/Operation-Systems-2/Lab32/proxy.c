@@ -57,7 +57,6 @@ char* appendNewData(char* dstBuffer, size_t* oldSize, char* srcBuffer, size_t sr
 }
 
 void writeToServer(connection* conn) {
-//    printf("WRITE TO SERVER\n");
     if (conn->handleSize < conn->allSize) {
         ssize_t res = send(conn->serverSocket, conn->buffer + conn->handleSize,
                            conn->allSize, NO_FLAGS);
@@ -77,7 +76,6 @@ void writeToServer(connection* conn) {
 }
 
 void readFromClient(connection* conn) {
-//    printf("READ FROM CLIENT\n");
     char buf[BUFFER_SIZE];
     ssize_t readCount;
     readCount = recv(conn->clientSocket, buf, BUFFER_SIZE, NO_FLAGS);
@@ -97,7 +95,6 @@ void readFromClient(connection* conn) {
 }
 
 void writeFromCacheToClient(connection* conn) {
-//    printf("WRITE FROM CACHE TO CLIENT\n");
     int localCacheStat;
     localCacheStat = cache[conn->cacheIndex].status;
     lockMutex(&cache[conn->cacheIndex].mutex);
@@ -170,8 +167,8 @@ void putToCache(char* message, connection* conn, ssize_t readCount) {
     }
     unlockMutex(&cache[conn->cacheIndex].mutex);
 }
+
 void readFromServer(connection* conn) {
-//    printf("READ FROM SERVER\n");
     char message[BUFFER_SIZE];
     ssize_t readCount = recv(conn->serverSocket, message, BUFFER_SIZE, NO_FLAGS);
     if (readCount == ERROR) {
@@ -185,7 +182,6 @@ void readFromServer(connection* conn) {
     putToCache(message, conn, readCount);
     if (conn->status == DROP) return;
     writeToClient(conn);
-//    if (message[readCount] == '\0') conn->status = DROP;
 }
 
 int handleEvent(connection* conn) {
@@ -222,6 +218,7 @@ void* run(void* param) {
     do {
         isOpenConn = handleEvent(conn);
     } while (isOpenConn);
+
     dropConnection(conn);
     free(conn);
     return SUCCESS_CODE;
@@ -243,8 +240,6 @@ int main(int argc, char* argv[]) {
         return ERROR;
     }
 
-    int error_code = initCache(cache);
-    if (error_code == ERROR) return ERROR;
     int proxySocketPort = atoi(argv[PORT_ARGUMENT_NUMBER]);
     if (!isValidPort(proxySocketPort)) {
         printf("Invalid proxy port");
@@ -254,7 +249,7 @@ int main(int argc, char* argv[]) {
     int proxySocket = getProxySocket(proxySocketPort);
     if (proxySocket == ERROR) return ERROR;
     pthread_attr_t attr;
-    error_code = pthread_attr_init(&attr);
+    int error_code = pthread_attr_init(&attr);
     if (error_code != SUCCESS) {
         perror("pthread_attr_init");
         return ERROR;
@@ -264,18 +259,18 @@ int main(int argc, char* argv[]) {
         perror("pthread_attr_setdetachstate");
         return ERROR;
     }
+
+    error_code = initCache(cache);
+    if (error_code == ERROR) return ERROR;
+
     while (TRUE) {
         int client = accept(proxySocket, NULL, NULL);
         if (client == ERROR) continue;
-        connection* conn = (struct connection*)malloc(sizeof(struct connection));
-        conn->clientSocket = client;
-        conn->serverSocket = EMPTY;
-        conn->cacheIndex = EMPTY;
-        conn->handleSize = 0;
-        conn->buffer = NULL;
-        conn->allSize = 0;
-        conn->status = READ_FROM_CLIENT;
-        conn->handleCacheSize = 0;
+        connection* conn = initConnection(client);
+        if (conn == NULL) {
+            destroyCache(cache);
+            return ERROR;
+        }
 
         pthread_t thread;
         error_code = pthread_create(&thread, &attr, run, (void*)conn);
@@ -284,8 +279,6 @@ int main(int argc, char* argv[]) {
             free(conn);
             continue;
         }
-        else {
-            printf("ACCEPTED NEW CONNECTION\n");
-        }
+        printf("ACCEPTED NEW CONNECTION\n");
     }
 }

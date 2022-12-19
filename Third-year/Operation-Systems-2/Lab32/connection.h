@@ -26,5 +26,6 @@ struct connection {
 
 void freeBufferConnection(connection* conn);
 void dropConnection(connection* conn);
+struct connection* initConnection(int clientSocket);
 
 #endif

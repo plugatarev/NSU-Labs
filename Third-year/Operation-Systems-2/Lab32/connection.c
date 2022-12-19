@@ -29,3 +29,20 @@ void dropConnection(connection* conn) {
     conn->cacheIndex = EMPTY;
     printf("dropped connection\n");
 }
+
+struct connection* initConnection(int clientSocket) {
+    connection* conn = (struct connection*)malloc(sizeof(struct connection));
+    if (conn == NULL) {
+        perror("initConnection");
+        return NULL;
+    }
+    conn->clientSocket = clientSocket;
+    conn->serverSocket = EMPTY;
+    conn->cacheIndex = EMPTY;
+    conn->handleSize = 0;
+    conn->buffer = NULL;
+    conn->allSize = 0;
+    conn->status = READ_FROM_CLIENT;
+    conn->handleCacheSize = 0;
+    return conn;
+}
