@@ -1,6 +1,12 @@
+create table company(
+    id              bigint primary key,
+    company_name    varchar(255) not null unique
+);
+
 create table department(
     id                 bigint primary key,
-    department_name    varchar(255) not null unique
+    department_name    varchar(255) not null unique,
+    company            bigint references company(id) on delete cascade on update cascade
 );
 
 create table employee_category(
@@ -30,8 +36,6 @@ create table employee(
   dismissal_date          date
 );
 
--- ok
--- TODO: проверить employee_type_attribute.employee_type = employee.employee_category_type
 create table employee_property(
     id             bigint primary key,
     employee       bigint references employee(id) on delete cascade on update cascade,
@@ -39,34 +43,28 @@ create table employee_property(
     value          varchar(255)
 );
 
--- ok
--- TODO: триггер на добавление работников в бригадиры - тип должен быть worker
 create table brigadier(
     id    bigint primary key references employee(id) on delete cascade on update cascade
 );
 
 create table brigade(
-    id              bigint primary key,
-    brigade_name    varchar(255) not null unique,
-    brigadier       bigint references brigadier(id) on delete set null on update cascade
+    id                  bigint primary key,
+    brigade_name        varchar(255) not null unique,
+    brigadier           bigint references brigadier(id) on delete set null on update cascade
 );
 
--- ok
--- TODO: триггер на добавление работника и бригады - тип должен быть worker
 create table worker_brigade(
     id              bigint primary key,
     worker          bigint references employee(id) on delete cascade on update cascade,
     brigade         bigint references brigade(id) on delete cascade on update cascade
 );
 
--- ok
--- TODO: триггер на добавление работника в начальника цеха - тип должен быть engineer_staff
 create table department_chief(
     id     bigint primary key references employee(id) on delete cascade on update cascade
 );
 
--- ok
--- TODO: триггер на добавление работника в начальника департамента - тип должен быть engineer_staff
+alter table department add chief bigint references department_chief(id) on delete set null on update cascade;
+
 create table department_region_chief(
     id     bigint primary key references employee(id) on delete cascade on update cascade
 );
@@ -78,6 +76,8 @@ create table department_region (
     collecting_brigade  bigint references brigade(id) on delete set null on update cascade,
     chief               bigint references department_region_chief(id) on delete set null on update cascade
 );
+
+alter table brigade add department_region bigint references department_region(id) on delete set null on update cascade;
 
 create table product_category(
     id      bigint primary key,
@@ -103,8 +103,6 @@ create table product(
     customer                varchar(255) not null
 );
 
--- ok
--- TODO
 create table product_property(
     id          bigint primary key,
     product     bigint references product(id) on delete cascade on update cascade,
@@ -121,8 +119,8 @@ create table product_process(
     product             bigint references product(id) on delete cascade on update cascade,
     description_work    text not null,
     department_region   bigint references department_region(id) on delete set null on update cascade,
-    status_work         varchar(255) references product_status(name) on delete cascade on update cascade,
-    release_date        date
+    status              varchar(255) references product_status(name) on delete cascade on update cascade,
+    release_date        Date
 );
 
 create table region_brigade(
@@ -131,8 +129,6 @@ create table region_brigade(
     brigade bigint references brigade(id)
 );
 
--- ok
--- TODO: триггер на добавление работника в мастеров - тип должен быть engineer_staff
 create table master(
     id           bigint primary key references employee(id) on delete cascade on update cascade,
     chief        bigint references department_region_chief(id) on delete set null on update cascade
@@ -143,8 +139,6 @@ create table laboratory(
     laboratory_name varchar(255) not null unique
 );
 
--- ok
--- TODO: триггер, что человек является лабораторным работником
 create table laboratory_employee(
     id              bigint primary key references employee(id) on delete cascade on update cascade,
     laboratory      bigint references laboratory(id) on delete set null on update cascade
@@ -165,7 +159,7 @@ create table laboratory_order(
     id              bigint primary key,
     product         bigint references product(id) on delete cascade on update cascade,
     description     text not null,
-    receipt_date    date not null,
+    testing_date    date not null,
     laboratory      bigint references laboratory(id) on delete cascade on update cascade
 );
 

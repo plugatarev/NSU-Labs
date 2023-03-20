@@ -1,5 +1,8 @@
-insert into department values (1, 'motor'),
-                              (2, 'device');
+insert into company values (1, 'Lada'),
+                           (2, 'Nada');
+
+insert into department values (1, 'motor', 1),
+                              (2, 'device', 2);
 
 insert into employee_category values (1, 'worker'),
                                      (2, 'engineering_staff'),
@@ -66,11 +69,20 @@ insert into worker_brigade values (1, 2, 1),
 insert into department_chief values (1),
                                     (10);
 
+update department set chief = 1 where department.id = 1;
+update department set chief = 10 where department.id = 2;
+
 insert into department_region_chief values (1),
                                            (5);
 
 insert into department_region values (1, 'First', 1, 1, 1),
                                      (2, 'Build', 2, 3, 5);
+
+update brigade set department_region = 1 where id = 1;
+update brigade set department_region = 2 where id = 2;
+update brigade set department_region = 1 where id = 3;
+
+
 
 insert into product_category values (1, 'motorbike'),
                                     (2, 'truck'),
@@ -109,24 +121,23 @@ insert into product_category_type values (1, 'Dodge Tomahawk', 1),
 
 insert into product values (1, 12, 1, 'David Belov'),
                            (2, 5, 1, 'StroiMash'),
-                           (3, 13, 2, 'Eduard Lomov');
+                           (3, 13, 2, 'Eduard Lomov'),
+                           (4, 2, 2, 'Bloty');
 
 insert into product_property values (1, 1, 3, '5'),
                                     (2, 2, 2, '20000'),
                                     (3, 3, 3, '5'),
                                     (4, 3, 7, '300');
 
-insert into product_status values ('layout'),
-                                  ('assembly'),
-                                  ('testing'),
-                                  ('release');
+insert into product_status values ('waiting'),
+                                  ('assembling'),
+                                  ('assembled');
 
-insert into product_process values (1, 1, 'motor manufacturing', 2, 'assembly', null),
-                                   (2, 1, 'packing', 1, 'release', '14.03.2021'),
-                                   (3, 2, 'smth', 2, 'assembly', null),
-                                   (4, 2, 'smth2', 1, 'testing', null),
-                                   (5, 2, 'smth3', 1, 'release', '12.01.2022');
-
+insert into product_process values (1, 1, 'motor manufacturing', 2, 'assembled', '02.12.2021'),
+                                   (2, 1, 'packing', 1, 'assembling', null),
+                                   (3, 2, 'smth', 2, 'assembled', '02.03.2022'),
+                                   (4, 2, 'smth2', 1, 'assembling', null),
+                                   (5, 2, 'smth3', 1, 'waiting', null);
 
 insert into region_brigade values (1, 1, 1),
                                   (2, 1, 2),

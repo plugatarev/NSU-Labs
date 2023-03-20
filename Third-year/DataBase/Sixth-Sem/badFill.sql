@@ -33,3 +33,5 @@ delete from product where product.id = 123;
 insert into product_property values (50, 123, 4, 'bad');
 insert into product_property values (50, 123, 2, 'ok');
 delete from product_property where product_property.id = 50;
+
+insert into product_process values (433, 1, 'motor manufacturing', 2, 'assembling', '12.12.2022')
