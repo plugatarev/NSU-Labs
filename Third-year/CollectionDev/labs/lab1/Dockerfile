@@ -27,6 +27,7 @@ RUN wget "https://nginx.org/download/nginx-1.23.3.tar.gz" && \
     make && \
     make install
 
+
 RUN rm /usr/local/nginx/html/index.html
 COPY index.html /usr/local/nginx/html/index.html
    

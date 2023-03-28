@@ -1,0 +1,116 @@
+version: '3'
+
+services:
+  db:
+    image: postgres:15.2
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - '5431:5432'
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  mysql_db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DB}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_db:/var/lib/mysql
+
+  passbolt:
+    image: passbolt/passbolt:3.11.1-1
+    restart: always
+    depends_on:
+      - mysql_db
+    environment:
+      - DATASOURCES_DEFAULT_HOST=mysql_db
+      - DATASOURCES_DEFAULT_USERNAME=${MYSQL_USER}
+      - DATASOURCES_DEFAULT_PASSWORD=${MYSQL_PASSWORD}
+      - DATASOURCES_DEFAULT_DATABASE=${MYSQL_DB}
+    ports:
+      - '8080:80'
+    volumes:
+      - passbolt_data:/var/www/passbolt 
+
+  nginx_proxy_manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    restart: unless-stopped
+    ports:
+      - '8081:80'
+    volumes:
+      - nginx_data:/data
+      - nginx_letsencrypt:/etc/letsencrypt
+
+  nextcloud:
+    image: nextcloud:production
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    ports:
+      - '8082:80'
+    volumes:
+      - nextcloud_data:/var/www/html
+
+  wikijs:
+    image: requarks/wiki:2
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - DB_TYPE=postgres
+      - DB_HOST=db
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASS=${POSTGRES_PASSWORD}
+      - DB_NAME=${POSTGRES_DB}
+    ports:
+      - '8083:3000'
+    volumes:
+      - wikijs_data:/var/wiki
+      
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - '8084:3000'
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+  n8n:
+    image: n8nio/n8n
+    restart: always
+    ports:
+      - '8085:5678'
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+  
+  proxy:
+    image: plugatarev/proxy_image
+    ports:
+      - '8086:80'
+
+volumes:
+  db_data:
+  grafana_data:
+  passbolt_data:
+  wikijs_data:
+  nextcloud_data:
+  nginx_data:
+  nginx_letsencrypt:
+  mysql_db:
