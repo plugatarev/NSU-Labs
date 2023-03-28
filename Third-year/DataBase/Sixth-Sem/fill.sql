@@ -129,15 +129,15 @@ insert into product_property values (1, 1, 3, '5'),
                                     (3, 3, 3, '5'),
                                     (4, 3, 7, '300');
 
-insert into product_status values ('waiting'),
-                                  ('assembling'),
-                                  ('assembled');
+insert into product_status values (1, 'waiting'),
+                                  (2, 'assembling'),
+                                  (3, 'assembled');
 
-insert into product_process values (1, 1, 'motor manufacturing', 2, 'assembled', '02.12.2021'),
-                                   (2, 1, 'packing', 1, 'assembling', null),
-                                   (3, 2, 'smth', 2, 'assembled', '02.03.2022'),
-                                   (4, 2, 'smth2', 1, 'assembling', null),
-                                   (5, 2, 'smth3', 1, 'waiting', null);
+insert into product_process values (1, 1, 'motor manufacturing', 2, 3, '02.12.2021'),
+                                   (2, 1, 'packing', 1, 2, null),
+                                   (3, 2, 'smth', 2, 3, '02.03.2022'),
+                                   (4, 2, 'smth2', 1, 2, null),
+                                   (5, 2, 'smth3', 1, 1, null);
 
 insert into region_brigade values (1, 1, 1),
                                   (2, 1, 2),
@@ -155,26 +155,26 @@ insert into laboratory_employee values (11, 1),
                                        (12, 2),
                                        (13, 3);
 
-insert into equipment values ('0213213212'),
-                             ('3433432121'),
-                             ('2344213433'),
-                             ('4332123231');
+insert into equipment values (1, '0213213212'),
+                             (2, '3433432121'),
+                             (3, '2344213433'),
+                             (4, '4332123231');
 
-insert into test values (1, '0213213212', 11, 'strength'),
-                        (2, '3433432121', 11, 'stability'),
-                        (3, '2344213433', 12, 'solidity'),
-                        (4, '4332123231', 13, 'permanency'),
-                        (5, '3433432121', 12, '3433432121');
+insert into test values (1, 1, 11, 'strength'),
+                        (2, 2, 11, 'stability'),
+                        (3, 3, 12, 'solidity'),
+                        (4, 4, 13, 'permanency'),
+                        (5, 2, 12, '3433432121');
 
-insert into laboratory_order values (1, 1, 'crash testing', '12.12.2021', 1),
-                                    (2, 1, 'vehicle chassis check', '10.10.2020', 2),
-                                    (3, 1, 'vehicle wiring check', '13.02.2022', 3);
+insert into laboratory_order values (1, 1, 1),
+                                    (2, 1, 2),
+                                    (3, 1, 3);
 
-insert into order_test values (1, 1, 1),
-                              (2, 1, 2),
-                              (3, 1, 3),
-                              (4, 1, 4),
-                              (5, 1, 5),
-                              (6, 2, 2),
-                              (7, 3, 2),
-                              (8, 3, 5);
+insert into order_test values (1, 1, 1, '12.12.2021'),
+                              (2, 1, 2, '13.12.2021'),
+                              (3, 1, 3, '14.12.2021'),
+                              (4, 1, 4, '14.12.2021'),
+                              (5, 1, 5, '30.12.2021'),
+                              (6, 2, 2, '10.10.2022'),
+                              (7, 3, 2, '13.02.2022'),
+                              (8, 3, 5, '13.02.2022');

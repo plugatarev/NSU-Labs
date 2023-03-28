@@ -27,13 +27,13 @@ create table employee_type_attribute(
 );
 
 create table employee(
-  id                      bigint primary key,
-  first_name              varchar(255) not null,
-  second_name             varchar(255) not null,
-  passport                varchar(10) not null,
-  employee_type           bigint references employee_category_type(id) on delete set null on update cascade,
-  employment_date         date not null,
-  dismissal_date          date
+    id                      bigint primary key,
+    first_name              varchar(255) not null,
+    second_name             varchar(255) not null,
+    passport                varchar(10) not null,
+    employee_type           bigint references employee_category_type(id) on delete set null on update cascade,
+    employment_date         date not null,
+    dismissal_date          date
 );
 
 create table employee_property(
@@ -87,7 +87,7 @@ create table product_category(
 create table product_type_attribute(
     id                  bigint primary key,
     attribute_name      varchar(255) not null,
-    category    bigint references product_category(id) on delete cascade on update cascade
+    category            bigint references product_category(id) on delete cascade on update cascade
 );
 
 create table product_category_type(
@@ -111,7 +111,8 @@ create table product_property(
 );
 
 create table product_status(
-    name varchar(255) primary key
+    id   bigint primary key,
+    name varchar(255) not null unique
 );
 
 create table product_process(
@@ -119,8 +120,8 @@ create table product_process(
     product             bigint references product(id) on delete cascade on update cascade,
     description_work    text not null,
     department_region   bigint references department_region(id) on delete set null on update cascade,
-    status              varchar(255) references product_status(name) on delete cascade on update cascade,
-    release_date        Date
+    status              bigint references product_status(id) on delete cascade on update cascade,
+    release_date        date
 );
 
 create table region_brigade(
@@ -145,26 +146,26 @@ create table laboratory_employee(
 );
 
 create table equipment(
+    id              bigint primary key,
     serial_number   varchar(10) not null unique
 );
 
 create table test(
     id                  bigint primary key,
-    equipment           varchar(10) references equipment(serial_number) on delete cascade on update cascade,
+    equipment           bigint references equipment(id) on delete cascade on update cascade,
     laboratory_employee bigint references laboratory_employee(id) on delete cascade on update cascade,
-    description         varchar(255) not null
+    description         text not null
 );
 
 create table laboratory_order(
     id              bigint primary key,
     product         bigint references product(id) on delete cascade on update cascade,
-    description     text not null,
-    testing_date    date not null,
     laboratory      bigint references laboratory(id) on delete cascade on update cascade
 );
 
 create table order_test(
     id                  bigint primary key,
     laboratory_order    bigint references laboratory_order(id) on delete cascade on update cascade,
-    test                bigint references test(id) on delete cascade on update cascade
+    test                bigint references test(id) on delete cascade on update cascade,
+    testing_date        date not null
 );

@@ -15,8 +15,8 @@ insert into department_region_chief values (1);
 delete from department_region_chief where department_region_chief.id = 8;
 
 insert into master values (8);
-insert into department_region_chief values (2);
-delete from department_region_chief where department_region_chief.id = 2;
+insert into master values (1);
+delete from master where master.id = 1;
 
 insert into laboratory_employee values (1);
 insert into laboratory_employee values (12);
@@ -31,7 +31,7 @@ delete from employee_property where employee_property.id = 50;
 insert into product values (123, 2, 1, '1234qwer32');
 delete from product where product.id = 123;
 insert into product_property values (50, 123, 4, 'bad');
-insert into product_property values (50, 123, 2, 'ok');
+insert into product_property values (50, 123, 1, 'ok');
 delete from product_property where product_property.id = 50;
 
-insert into product_process values (433, 1, 'motor manufacturing', 2, 'assembling', '12.12.2022')
+insert into product_process values (28, 1, 'motor manufacturing', 2, 2, '12.12.2021')
