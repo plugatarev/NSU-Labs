@@ -16,7 +16,7 @@ disp('H: ', H);
 l = spec(H);
 disp('Собственные числа H: ', l);
 if l > 0 then
-    k = max(l);
+    k = norm(H,2);
 else
     k= %inf;
 end

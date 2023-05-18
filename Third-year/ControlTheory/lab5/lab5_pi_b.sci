@@ -18,7 +18,7 @@ disp('H: ', H);
 l = spec(H);
 disp('Собственные числа H: ', l);
 if l > 0 then
-    k = norm(H,2);
+    k = h*norm(H,2);
 else
     k= %inf;
 end
