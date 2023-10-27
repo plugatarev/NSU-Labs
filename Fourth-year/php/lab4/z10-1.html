@@ -1,0 +1,43 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>z10-1</title>
+    <style>
+        tab50l {padding-left: 50px;}
+        tab130l {padding-left: 130px;}
+        tab159l {padding-left: 159px;}
+        tab180l {padding-left: 180px;}
+        tab198l {padding-left: 198px;}
+        tab295l {padding-left: 295px;}
+        tab300r {padding-right: 300px;}
+    </style>
+</head>
+<body>
+<form action="z10-2.php" method="GET">
+
+    <p><tab300r>Таблицы</tab300r><strong>Отобразить</strong></p>
+    <p><tab295l><strong>Структуру</strong></tab295l><tab50l><strong>Содержимое</strong></tab50l></p>
+
+    <p>
+        <strong>Продавцы (sal)</strong>
+        <tab180l><input type="checkbox" name="structure[]" value="sal"></tab180l>
+        <tab130l><input type="checkbox" name="content[]" value="sal"></tab130l>
+    </p>
+
+    <p>
+        <strong>Покупатели (cust)</strong>
+        <tab159l><input type="checkbox" name="structure[]" value="cust"></tab159l>
+        <tab130l><input type="checkbox" name="content[]" value="cust"></tab130l>
+    </p>
+
+    <p>
+        <strong>Заказы (ord)</strong>
+        <tab198l><input type="checkbox" name="structure[]" value="ord"></tab198l>
+        <tab130l><input type="checkbox" name="content[]" value="ord"></tab130l>
+    </p>
+
+    <p><input type="submit" value="Вывести!"></p>
+</form>
+</body>
+</html>
