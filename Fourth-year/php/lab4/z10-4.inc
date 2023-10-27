@@ -1,6 +1,6 @@
 <?php
 $user = "root";
-$pass = "diplomnsu";
+$pass = "root";
 $db = "info_search";
 
 $conn = mysqli_connect("localhost", $user, $pass);
