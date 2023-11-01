@@ -5,6 +5,11 @@ $mysqli_password = "root";
 
 $conn = mysqli_connect("127.0.0.1", $mysqli_user, $mysqli_password);
 
+$resultSelectDB = mysqli_select_db($conn, "sample");
+
+if(!$resultSelectDB)
+    die("<p>Не удалось выбрать базу данных</p>" . mysqli_error($conn));
+    
 if ($conn->connect_error) {
     die('Ошибка подключения: ' . $conn->connect_error);
 }
